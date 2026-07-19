@@ -29,6 +29,9 @@ public class MapPanel : UserControl
     /// <summary>Fires when user right-clicks to remove a waypoint. Args: waypointIndex</summary>
     public event Action<int>? WaypointRemoved;
 
+    /// <summary>Fires when simulator requests start position from map. Args: lat, lon</summary>
+    public event Action<double, double>? SimStartPosReceived;
+
     public MapPanel()
     {
         Dock = DockStyle.Fill;
@@ -94,6 +97,12 @@ public class MapPanel : UserControl
                 var idx = int.Parse(msg.Split("\"index\":")[1].Split("}")[0]);
                 WaypointRemoved?.Invoke(idx);
             }
+            else if (msg.Contains("setSimStart"))
+            {
+                var lat = double.Parse(msg.Split("\"lat\":")[1].Split(",")[0]);
+                var lon = double.Parse(msg.Split("\"lon\":")[1].Split("}")[0]);
+                SimStartPosReceived?.Invoke(lat, lon);
+            }
         }
         catch { }
     }
@@ -147,6 +156,26 @@ public class MapPanel : UserControl
     public void SetVehicleType(string vehicleType)
     {
         try { _webView?.CoreWebView2.ExecuteScriptAsync($"setVehicleType('{vehicleType}')"); } catch { }
+    }
+
+    public void ShowFlightPath(double startLat, double startLon, double targetLat, double targetLon, string pattern)
+    {
+        try
+        {
+            var json = $"{{startLat:{startLat},startLon:{startLon},targetLat:{targetLat},targetLon:{targetLon},pattern:'{pattern}'}}";
+            _webView?.CoreWebView2.ExecuteScriptAsync($"showFlightPath({json})");
+        } catch { }
+    }
+
+    public void HideFlightPath()
+    {
+        try { _webView?.CoreWebView2.ExecuteScriptAsync("hideFlightPath()"); } catch { }
+    }
+
+    public void SetSimStartFromMap()
+    {
+        // Use last clicked position or default London
+        try { _webView?.CoreWebView2.ExecuteScriptAsync("getSimStartPos()"); } catch { }
     }
 
     private static string GetMapHtml() => @"<!DOCTYPE html>
@@ -203,6 +232,7 @@ public class MapPanel : UserControl
   <div id=""wpcount"">Waypoints: 0</div>
   <button onclick=""clearAllWaypoints()"">Clear All</button>
   <button class=""danger"" onclick=""toggleAddMode()"">- Stop Adding</button>
+  <button onclick=""toggleSetStartMode()"">Set Start</button>
   <button onclick=""exportKML()"">Export KML</button>
   <button onclick=""syncFromMission()"">Sync Mission</button>
 </div>
@@ -230,6 +260,7 @@ var routeLine = L.polyline([], { color: '#FF3366', weight: 2, opacity: 0.8, dash
 var waypointMarkers = [];
 var homeMarker = null;
 var addMode = true;
+var setStartMode = false;
 var waypointIndex = 0;
 var firstPosition = true;
 
@@ -238,6 +269,14 @@ document.getElementById('toolbar').addEventListener('click', function(e) { e.sto
 
 // Click to add waypoint
 map.on('click', function(e) {
+  if (setStartMode) {
+    // Set simulator start position
+    setStartMode = false;
+    var btn = document.querySelector('#toolbar button[onclick=""toggleSetStartMode()""]');
+    if (btn) { btn.textContent = 'Set Start'; btn.style.background = ''; btn.style.color = ''; }
+    window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'setSimStart', lat:e.latlng.lat, lon:e.latlng.lng}));
+    return;
+  }
   if (!addMode) return;
   waypointIndex++;
   var lat = e.latlng.lat;
@@ -288,6 +327,22 @@ function toggleAddMode() {
     btn.style.background = addMode ? 'rgba(255,51,102,0.2)' : 'rgba(0,212,255,0.2)';
     btn.style.borderColor = addMode ? 'rgba(255,51,102,0.5)' : 'rgba(0,212,255,0.5)';
     btn.style.color = addMode ? '#FF3366' : '#00D4FF';
+  }
+}
+
+function toggleSetStartMode() {
+  setStartMode = !setStartMode;
+  var btn = document.querySelector('#toolbar button[onclick=""toggleSetStartMode()""]');
+  if (btn) {
+    if (setStartMode) {
+      btn.textContent = 'Click Map...';
+      btn.style.background = 'rgba(0,200,80,0.4)';
+      btn.style.color = '#00C850';
+    } else {
+      btn.textContent = 'Set Start';
+      btn.style.background = '';
+      btn.style.color = '';
+    }
   }
 }
 
@@ -403,6 +458,79 @@ function setVehicleType(type) {
     });
     vehicleMarker.setIcon(newIcon);
   }
+}
+
+// Flight path visualization
+var flightPathLayers = [];
+var startMarkerFP = null;
+var targetMarkerFP = null;
+var routeLineFP = null;
+var circleOverlay = null;
+
+function clearFlightPath() {
+  flightPathLayers.forEach(function(l) { map.removeLayer(l); });
+  flightPathLayers = [];
+  startMarkerFP = null;
+  targetMarkerFP = null;
+  routeLineFP = null;
+  circleOverlay = null;
+}
+
+function showFlightPath(opts) {
+  clearFlightPath();
+
+  // Start marker (green S)
+  startMarkerFP = L.marker([opts.startLat, opts.startLon], {icon: L.divIcon({
+    className: 'waypoint-icon',
+    html: '<div style=""width:28px;height:28px;background:rgba(0,200,80,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(0,200,80,0.7)"">S</div>',
+    iconSize: [28, 28], iconAnchor: [14, 14]
+  })}).addTo(map);
+  startMarkerFP.bindPopup('<b>Start Position</b>');
+  flightPathLayers.push(startMarkerFP);
+
+  // Target marker (red T)
+  targetMarkerFP = L.marker([opts.targetLat, opts.targetLon], {icon: L.divIcon({
+    className: 'waypoint-icon',
+    html: '<div style=""width:28px;height:28px;background:rgba(255,51,102,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(255,51,102,0.7)"">T</div>',
+    iconSize: [28, 28], iconAnchor: [14, 14]
+  })}).addTo(map);
+  targetMarkerFP.bindPopup('<b>Target Position</b>');
+  flightPathLayers.push(targetMarkerFP);
+
+  if (opts.pattern === 'circle') {
+    // Draw circle around start point (~200m radius)
+    var R = 6371000;
+    var dLat = 0.0018;
+    circleOverlay = L.circle([opts.startLat, opts.startLon], {
+      radius: 200, color: '#00D4FF', fillColor: 'rgba(0,212,255,0.1)',
+      fillOpacity: 0.15, weight: 2, dashArray: '8,8'
+    }).addTo(map);
+    flightPathLayers.push(circleOverlay);
+  } else {
+    // Draw route line (green dashed)
+    routeLineFP = L.polyline([
+      [opts.startLat, opts.startLon],
+      [opts.targetLat, opts.targetLon]
+    ], { color: '#00C850', weight: 2, opacity: 0.8, dashArray: '10,6' }).addTo(map);
+    flightPathLayers.push(routeLineFP);
+  }
+
+  // Fit map to show full path
+  var bounds = L.latLngBounds([
+    [opts.startLat, opts.startLon],
+    [opts.targetLat, opts.targetLon]
+  ]);
+  map.fitBounds(bounds, { padding: [60, 60] });
+}
+
+function hideFlightPath() { clearFlightPath(); }
+
+function getSimStartPos() {
+  // Send last known position back to C#, or current map center
+  var center = map.getCenter();
+  window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({
+    type:'simStartPos', lat:center.lat, lon:center.lng
+  }));
 }
 </script>
 </body>

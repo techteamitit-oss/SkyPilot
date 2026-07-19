@@ -35,6 +35,8 @@ public partial class MainForm : Form
     private Control? _activeContent;
     private string _selectedVehicleType = "plane";
     private string _selectedPattern = "circle";
+    private double _simStartLat = 51.5074;
+    private double _simStartLon = -0.1278;
 
     // Borderless window dragging
     private bool _dragging;
@@ -142,6 +144,11 @@ public partial class MainForm : Form
                 var coords = waypoints.Select(w => (w.Lat, w.Lon)).ToList();
                 _mapPanel.SyncWaypoints(coords);
             }
+        };
+        _mapPanel.SimStartPosReceived += (lat, lon) =>
+        {
+            _simStartLat = lat;
+            _simStartLon = lon;
         };
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
@@ -329,13 +336,16 @@ public partial class MainForm : Form
             return;
         }
 
-        _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern);
+        _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern,
+            startLat: _simStartLat, startLon: _simStartLon);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapPanel!);
+        _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
+            _sim.TargetLat, _sim.TargetLon, _selectedPattern);
         _stream.OpenSimulation(_sim);
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
-        _messageLog?.AddMessage("Simulator started", 6);
+        _messageLog?.AddMessage($"Simulator started at {_simStartLat:F4}, {_simStartLon:F4}", 6);
     }
 
     private void StopSimulatorToolStripMenuItem_Click(object? sender = null, EventArgs? e = null)
@@ -345,6 +355,7 @@ public partial class MainForm : Form
             _stream.Close();
             _sim = null;
             _vehicleState.IsConnected = false;
+            _mapPanel?.HideFlightPath();
             lblConnection.Text = "Disconnected";
             lblConnection.ForeColor = ModernTheme.TextMuted;
         }
