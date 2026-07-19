@@ -148,6 +148,18 @@ public partial class MainForm : Form
                 _mapPanel.SyncWaypoints(coords);
             }
         };
+        _mapPanel.SimStartPosReceived += (lat, lon) =>
+        {
+            _simStartLat = lat;
+            _simStartLon = lon;
+            _messageLog?.AddMessage($"Start set: ({lat:F6},{lon:F6})", 6);
+        };
+        _mapPanel.SimTargetPosReceived += (lat, lon) =>
+        {
+            _simTargetLat = lat;
+            _simTargetLon = lon;
+            _messageLog?.AddMessage($"Target set: ({lat:F6},{lon:F6})", 6);
+        };
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
     }
@@ -340,18 +352,10 @@ public partial class MainForm : Form
             return;
         }
 
-        // Use waypoints from map: WP1 = start, WP2 = target (for point2point/distance)
-        var mapWps = _mapPanel?.GetWaypoints() ?? new();
-        _messageLog?.AddMessage($"Found {mapWps.Count} waypoints on map", 6);
-
-        double startLat = mapWps.Count > 0 ? mapWps[0].Lat : _simStartLat;
-        double startLon = mapWps.Count > 0 ? mapWps[0].Lon : _simStartLon;
-        double targetLat = mapWps.Count > 1 ? mapWps[1].Lat : _simTargetLat;
-        double targetLon = mapWps.Count > 1 ? mapWps[1].Lon : _simTargetLon;
-
+        // Use manually set positions from map (Set Start / Set Target buttons)
         _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern,
-            startLat: startLat, startLon: startLon,
-            targetLat: targetLat, targetLon: targetLon);
+            startLat: _simStartLat, startLon: _simStartLon,
+            targetLat: _simTargetLat, targetLon: _simTargetLon);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapPanel!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
@@ -359,7 +363,7 @@ public partial class MainForm : Form
         _stream.OpenSimulation(_sim);
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
-        _messageLog?.AddMessage($"Sim start: ({startLat:F6},{startLon:F6}) → ({targetLat:F6},{targetLon:F6})", 6);
+        _messageLog?.AddMessage($"Sim: ({_sim.StartLat:F6},{_sim.StartLon:F6}) → ({_sim.TargetLat:F6},{_sim.TargetLon:F6})", 6);
     }
 
     private void StopSimulatorToolStripMenuItem_Click(object? sender = null, EventArgs? e = null)

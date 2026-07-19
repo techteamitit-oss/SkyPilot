@@ -30,8 +30,11 @@ public class MapPanel : UserControl
     /// <summary>Fires when user right-clicks to remove a waypoint. Args: waypointIndex</summary>
     public event Action<int>? WaypointRemoved;
 
-    /// <summary>Fires when user clicks map (in any mode). Args: lat, lon</summary>
-    public event Action<double, double>? MapClicked;
+    /// <summary>Fires when user sets simulator start on map. Args: lat, lon</summary>
+    public event Action<double, double>? SimStartPosReceived;
+
+    /// <summary>Fires when user sets simulator target on map. Args: lat, lon</summary>
+    public event Action<double, double>? SimTargetPosReceived;
 
     public MapPanel()
     {
@@ -104,6 +107,18 @@ public class MapPanel : UserControl
             {
                 int idx = root.GetProperty("index").GetInt32();
                 WaypointRemoved?.Invoke(idx);
+            }
+            else if (type == "setSimStart")
+            {
+                SimStartPosReceived?.Invoke(
+                    root.GetProperty("lat").GetDouble(),
+                    root.GetProperty("lon").GetDouble());
+            }
+            else if (type == "setSimTarget")
+            {
+                SimTargetPosReceived?.Invoke(
+                    root.GetProperty("lat").GetDouble(),
+                    root.GetProperty("lon").GetDouble());
             }
         }
         catch { }
@@ -233,6 +248,8 @@ public class MapPanel : UserControl
   <div id=""wpcount"">Waypoints: 0</div>
   <button onclick=""clearAllWaypoints()"">Clear All</button>
   <button class=""danger"" onclick=""toggleAddMode()"">- Stop Adding</button>
+  <button id=""btnSetStart"" onclick=""setStartClick()"">Set Start</button>
+  <button id=""btnSetTarget"" onclick=""setTargetClick()"">Set Target</button>
   <button onclick=""exportKML()"">Export KML</button>
   <button onclick=""syncFromMission()"">Sync Mission</button>
 </div>
@@ -262,12 +279,54 @@ var homeMarker = null;
 var addMode = true;
 var waypointIndex = 0;
 var firstPosition = true;
+var setStartActive = false;
+var setTargetActive = false;
+var simStartLat = null, simStartLon = null;
+var simTargetLat = null, simTargetLon = null;
+var simStartMarker = null, simTargetMarker = null;
 
 // Stop toolbar clicks from bubbling to map
 document.getElementById('toolbar').addEventListener('click', function(e) { e.stopPropagation(); });
 
 // Click to add waypoint
 map.on('click', function(e) {
+  if (setStartActive) {
+    setStartActive = false;
+    document.getElementById('btnSetStart').textContent = 'Set Start';
+    document.getElementById('btnSetStart').style.background = '';
+    document.getElementById('btnSetStart').style.color = '';
+    simStartLat = e.latlng.lat;
+    simStartLon = e.latlng.lng;
+    if (simStartMarker) map.removeLayer(simStartMarker);
+    simStartMarker = L.marker([simStartLat, simStartLon], {icon: L.divIcon({
+      className: 'waypoint-icon',
+      html: '<div style=""width:28px;height:28px;background:rgba(0,200,80,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(0,200,80,0.7)"">S</div>',
+      iconSize: [28, 28], iconAnchor: [14, 14]
+    })}).addTo(map);
+    simStartMarker.bindPopup('<b>Start Position</b>');
+    window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'setSimStart', lat:simStartLat, lon:simStartLon}));
+    return;
+  }
+  if (setTargetActive) {
+    setTargetActive = false;
+    document.getElementById('btnSetTarget').textContent = 'Set Target';
+    document.getElementById('btnSetTarget').style.background = '';
+    document.getElementById('btnSetTarget').style.color = '';
+    simTargetLat = e.latlng.lat;
+    simTargetLon = e.latlng.lng;
+    if (simTargetMarker) map.removeLayer(simTargetMarker);
+    simTargetMarker = L.marker([simTargetLat, simTargetLon], {icon: L.divIcon({
+      className: 'waypoint-icon',
+      html: '<div style=""width:28px;height:28px;background:rgba(255,51,102,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(255,51,102,0.7)"">T</div>',
+      iconSize: [28, 28], iconAnchor: [14, 14]
+    })}).addTo(map);
+    simTargetMarker.bindPopup('<b>Target Position</b>');
+    // Draw route line between S and T
+    if (simStartLat !== null) {
+      window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'setSimTarget', lat:simTargetLat, lon:simTargetLon}));
+    }
+    return;
+  }
   if (!addMode) return;
   waypointIndex++;
   var lat = e.latlng.lat;
@@ -321,9 +380,30 @@ function toggleAddMode() {
   }
 }
 
-function getWaypointsForSim() {
-  var wps = waypointMarkers.map(function(w) { return {lat: w.lat, lon: w.lon}; });
-  window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'waypointsForSim', waypoints: wps}));
+function setStartClick() {
+  setStartActive = !setStartActive;
+  setTargetActive = false;
+  var s = document.getElementById('btnSetStart');
+  var t = document.getElementById('btnSetTarget');
+  s.textContent = setStartActive ? 'Click map...' : 'Set Start';
+  s.style.background = setStartActive ? 'rgba(0,200,80,0.4)' : '';
+  s.style.color = setStartActive ? '#00C850' : '';
+  t.textContent = 'Set Target';
+  t.style.background = '';
+  t.style.color = '';
+}
+
+function setTargetClick() {
+  setTargetActive = !setTargetActive;
+  setStartActive = false;
+  var s = document.getElementById('btnSetStart');
+  var t = document.getElementById('btnSetTarget');
+  t.textContent = setTargetActive ? 'Click map...' : 'Set Target';
+  t.style.background = setTargetActive ? 'rgba(255,51,102,0.4)' : '';
+  t.style.color = setTargetActive ? '#FF3366' : '';
+  s.textContent = 'Set Start';
+  s.style.background = '';
+  s.style.color = '';
 }
 
 function updateRoute() {
