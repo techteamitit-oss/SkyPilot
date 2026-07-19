@@ -37,6 +37,8 @@ public class MissionPanel : UserControl
         toolbar.Controls.Add(new Label { Text = "|", ForeColor = Color.Gray, AutoSize = false, Width = 10, Dock = DockStyle.None });
         toolbar.Controls.Add(MakeButton("Save", (s, e) => SaveMission()));
         toolbar.Controls.Add(MakeButton("Load", (s, e) => LoadMission()));
+        toolbar.Controls.Add(new Label { Text = "|", ForeColor = Color.Gray, AutoSize = false, Width = 10, Dock = DockStyle.None });
+        toolbar.Controls.Add(MakeButton("Export KML", (s, e) => ExportKml()));
 
         _grid = new DataGridView
         {
@@ -301,6 +303,86 @@ public class MissionPanel : UserControl
         112 => "CONDITION_DELAY",
         _ => $"CMD_{cmd}"
     };
+
+    private void ExportKml()
+    {
+        if (_waypoints.Count == 0)
+        {
+            MessageBox.Show("No waypoints to export.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var sfd = new SaveFileDialog
+        {
+            Filter = "KML files|*.kml|All files|*.*",
+            FileName = "mission.kml"
+        };
+        if (sfd.ShowDialog() != DialogResult.OK) return;
+
+        var coords = new List<string>();
+        var placemarks = new List<string>();
+
+        foreach (var wp in _waypoints)
+        {
+            // KML coordinates are lon,lat,alt
+            coords.Add($"{wp.Lon:F7},{wp.Lat:F7},{wp.Alt:F1}");
+
+            placemarks.Add($@"
+    <Placemark>
+      <name>WP{wp.Seq} - {wp.Command}</name>
+      <description>Altitude: {wp.Alt:F1}m | {wp.Command}</description>
+      <Point>
+        <coordinates>{wp.Lon:F7},{wp.Lat:F7},{wp.Alt:F1}</coordinates>
+      </Point>
+    </Placemark>");
+        }
+
+        string coordsString = string.Join(" ", coords);
+        string placemarkString = string.Join("", placemarks);
+
+        string kml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+<kml xmlns=""http://www.opengis.net/kml/2.2"">
+  <Document>
+    <name>SkyPilot Mission</name>
+    <description>Exported from SkyPilot GCS</description>
+    <Style id=""waypointStyle"">
+      <IconStyle>
+        <color>ff00aaff</color>
+        <scale>0.8</scale>
+        <Icon>
+          <href>http://maps.google.com/mapfiles/kml/shapes/placemark_square.png</href>
+        </Icon>
+      </IconStyle>
+      <LineStyle>
+        <color>ff00aaff</color>
+        <width>3</width>
+      </LineStyle>
+    </Style>
+    <Style id=""routeStyle"">
+      <LineStyle>
+        <color>ff00aaff</color>
+        <width>3</width>
+      </LineStyle>
+    </Style>
+    <Placemark>
+      <name>Mission Route</name>
+      <styleUrl>#routeStyle</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <altitudeMode>relativeToGround</altitudeMode>
+        <coordinates>
+          {coordsString}
+        </coordinates>
+      </LineString>
+    </Placemark>
+    {placemarkString}
+  </Document>
+</kml>";
+
+        File.WriteAllText(sfd.FileName, kml);
+        MessageBox.Show($"KML exported: {_waypoints.Count} waypoints\n{sfd.FileName}",
+            "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
 
     public void SetWaypoints(List<Waypoint> waypoints)
     {
