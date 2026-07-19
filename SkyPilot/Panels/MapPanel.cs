@@ -12,6 +12,7 @@ public class MapPanel : UserControl
     private double _lastLat, _lastLon;
     private readonly List<(double Lat, double Lon)> _track = new();
     private readonly List<(double Lat, double Lon, int Index)> _waypoints = new();
+    private bool _mapLoaded;
 
     /// <summary>Fires when user clicks map to add a waypoint. Args: lat, lon, waypointIndex</summary>
     public event Action<double, double, int>? WaypointAdded;
