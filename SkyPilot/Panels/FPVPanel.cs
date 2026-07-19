@@ -18,6 +18,9 @@ public class FPVPanel : UserControl
     private int _frameCount;
     private System.Windows.Forms.Timer? _captureTimer;
     private Button _recBtn;
+    private int _rainIntensity; // 0=off, 1=light, 2=medium, 3=heavy
+    private readonly Random _rainRng = new();
+    private readonly List<(int X, int Y, int Speed)> _raindrops = new();
 
     public bool IsRecording => _recording;
 
@@ -68,6 +71,18 @@ public class FPVPanel : UserControl
     public void UpdatePosition(double lat, double lon, float heading)
     {
         _miniMap.UpdatePosition(lat, lon, heading);
+    }
+
+    public void SetRain(int intensity)
+    {
+        _rainIntensity = intensity;
+        _raindrops.Clear();
+        if (intensity > 0)
+        {
+            int count = intensity switch { 1 => 60, 2 => 150, 3 => 300, _ => 0 };
+            for (int i = 0; i < count; i++)
+                _raindrops.Add((_rainRng.Next(0, 800), _rainRng.Next(0, 600), 4 + _rainRng.Next(4)));
+        }
     }
 
     private void ToggleRecording()
@@ -215,12 +230,12 @@ public class FPVPanel : UserControl
 
         float pitchOffset = _pitch * 2.5f; // pixels per degree
 
-        // Ground (brown)
-        using var groundBrush = new SolidBrush(Color.FromArgb(180, 120, 80, 40));
+        // Ground (brown/earth)
+        using var groundBrush = new SolidBrush(Color.FromArgb(255, 140, 100, 50));
         g.FillRectangle(groundBrush, -w, pitchOffset, w * 2, h);
 
         // Sky (blue)
-        using var skyBrush = new SolidBrush(Color.FromArgb(180, 40, 80, 160));
+        using var skyBrush = new SolidBrush(Color.FromArgb(255, 70, 130, 220));
         g.FillRectangle(skyBrush, -w, -h + pitchOffset, w * 2, h);
 
         // Horizon line
@@ -228,9 +243,9 @@ public class FPVPanel : UserControl
         g.DrawLine(horizonPen, -w, pitchOffset, w, pitchOffset);
 
         // Pitch ladder lines
-        using var pitchPen = new Pen(Color.FromArgb(120, 255, 255, 255), 1);
+        using var pitchPen = new Pen(Color.FromArgb(200, 255, 255, 255), 1);
         using var pitchFont = new Font("Cascadia Code", 8f);
-        using var pitchBrush = new SolidBrush(Color.FromArgb(150, 255, 255, 255));
+        using var pitchBrush = new SolidBrush(Color.FromArgb(220, 255, 255, 255));
         for (int deg = -30; deg <= 30; deg += 10)
         {
             if (deg == 0) continue;
