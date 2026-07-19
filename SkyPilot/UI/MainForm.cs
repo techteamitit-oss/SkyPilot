@@ -332,7 +332,7 @@ public partial class MainForm : Form
         _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern);
         SwitchTab(navMap, _mapPanel!);
         _stream.OpenSimulation(_sim);
-        lblConnection.Text = "SIM (Plane)";
+        lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
         _messageLog?.AddMessage("Simulator started", 6);
     }
