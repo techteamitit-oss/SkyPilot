@@ -330,6 +330,7 @@ public partial class MainForm : Form
         }
 
         _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern);
+        _mapPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapPanel!);
         _stream.OpenSimulation(_sim);
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";

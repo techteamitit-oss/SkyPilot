@@ -124,7 +124,7 @@ public class MapPanel : UserControl
     public void SyncWaypoints(List<(double Lat, double Lon)> waypoints)
     {
         _waypoints.Clear();
-        try { _webView?.CoreWebView2.ExecuteScriptAsync("clearWaypoints()"); } catch { }
+        try { _webView?.CoreWebView2.ExecuteScriptAsync("clearWaypoints();firstPosition=true"); } catch { }
         for (int i = 0; i < waypoints.Count; i++)
         {
             _waypoints.Add((waypoints[i].Lat, waypoints[i].Lon, i + 1));
@@ -142,6 +142,11 @@ public class MapPanel : UserControl
     {
         _track.Clear();
         try { _webView?.CoreWebView2.ExecuteScriptAsync("clearTrack()"); } catch { }
+    }
+
+    public void SetVehicleType(string vehicleType)
+    {
+        try { _webView?.CoreWebView2.ExecuteScriptAsync($"setVehicleType('{vehicleType}')"); } catch { }
     }
 
     private static string GetMapHtml() => @"<!DOCTYPE html>
@@ -197,7 +202,7 @@ public class MapPanel : UserControl
 <div id=""toolbar"">
   <div id=""wpcount"">Waypoints: 0</div>
   <button onclick=""clearAllWaypoints()"">Clear All</button>
-  <button class=""danger"" onclick=""toggleAddMode()"">+ Add Mode</button>
+  <button class=""danger"" onclick=""toggleAddMode()"">- Stop Adding</button>
   <button onclick=""exportKML()"">Export KML</button>
   <button onclick=""syncFromMission()"">Sync Mission</button>
 </div>
@@ -208,9 +213,15 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
 }).addTo(map);
 
+var vehicleIcons = {
+  plane: '<div class=""vehicle-marker""><svg viewBox=""0 0 24 24"" width=""30"" height=""30""><path fill=""#00D4FF"" d=""M12 2L4 20h3l5-14 5 14h3L12 2z""/></svg></div>',
+  copter: '<div class=""vehicle-marker""><svg viewBox=""0 0 32 32"" width=""30"" height=""30""><circle cx=""16"" cy=""16"" r=""4"" fill=""#00D4FF""/><line x1=""16"" y1=""16"" x2=""6"" y2=""6"" stroke=""#00D4FF"" stroke-width=""2""/><line x1=""16"" y1=""16"" x2=""26"" y2=""6"" stroke=""#00D4FF"" stroke-width=""2""/><line x1=""16"" y1=""16"" x2=""6"" y2=""26"" stroke=""#00D4FF"" stroke-width=""2""/><line x1=""16"" y1=""16"" x2=""26"" y2=""26"" stroke=""#00D4FF"" stroke-width=""2""/><circle cx=""6"" cy=""6"" r=""3"" fill=""none"" stroke=""#00D4FF"" stroke-width=""1.5""/><circle cx=""26"" cy=""6"" r=""3"" fill=""none"" stroke=""#00D4FF"" stroke-width=""1.5""/><circle cx=""6"" cy=""26"" r=""3"" fill=""none"" stroke=""#00D4FF"" stroke-width=""1.5""/><circle cx=""26"" cy=""26"" r=""3"" fill=""none"" stroke=""#00D4FF"" stroke-width=""1.5""/></svg></div>',
+  rover: '<div class=""vehicle-marker""><svg viewBox=""0 0 28 20"" width=""30"" height=""22""><rect x=""4"" y=""4"" width=""20"" height=""10"" rx=""3"" fill=""#00D4FF""/><circle cx=""8"" cy=""17"" r=""2.5"" fill=""#E6EDF3"" stroke=""#00D4FF"" stroke-width=""1""/><circle cx=""20"" cy=""17"" r=""2.5"" fill=""#E6EDF3"" stroke=""#00D4FF"" stroke-width=""1""/><rect x=""22"" y=""7"" width=""4"" height=""4"" rx=""1"" fill=""rgba(0,212,255,0.5)""/></svg></div>'
+};
+var currentVehicleType = 'plane';
 var vehicleIcon = L.divIcon({
   className: 'vehicle-icon',
-  html: '<div class=""vehicle-marker""><svg viewBox=""0 0 24 24"" width=""30"" height=""30""><path fill=""#00D4FF"" d=""M12 2L4 20h3l5-14 5 14h3L12 2z""/></svg></div>',
+  html: vehicleIcons['plane'],
   iconSize: [30, 30], iconAnchor: [15, 15]
 });
 var vehicleMarker = L.marker([51.5074, -0.1278], {icon: vehicleIcon}).addTo(map);
@@ -218,24 +229,28 @@ var trackLine = L.polyline([], { color: '#00D4FF', weight: 2, opacity: 0.6 }).ad
 var routeLine = L.polyline([], { color: '#FF3366', weight: 2, opacity: 0.8, dashArray: '8,8' }).addTo(map);
 var waypointMarkers = [];
 var homeMarker = null;
-var addMode = false;
+var addMode = true;
 var waypointIndex = 0;
+var firstPosition = true;
 
-// Click to add waypoint - always works
+// Stop toolbar clicks from bubbling to map
+document.getElementById('toolbar').addEventListener('click', function(e) { e.stopPropagation(); });
+
+// Click to add waypoint
 map.on('click', function(e) {
+  if (!addMode) return;
   waypointIndex++;
   var lat = e.latlng.lat;
   var lon = e.latlng.lng;
   var marker = L.marker([lat, lon], {icon: L.divIcon({
     className: 'waypoint-icon',
-    html: '<div class=""waypoint-marker"" data-idx=""' + waypointIndex + '"" onclick=""removeWaypoint(' + waypointIndex + ')"">' + waypointIndex + '</div>',
+    html: '<div class=""waypoint-marker"" data-idx=""' + waypointIndex + '"" onclick=""event.stopPropagation();removeWaypoint(' + waypointIndex + ')"">' + waypointIndex + '</div>',
     iconSize: [26, 26], iconAnchor: [13, 13]
   })}).addTo(map);
   marker.bindPopup('WP' + waypointIndex + '<br><small>Click marker to remove</small>');
   waypointMarkers.push({marker: marker, index: waypointIndex, lat: lat, lon: lon});
   updateRoute();
   updateWpCount();
-  // Send to C#
   window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'addWaypoint', lat:lat, lon:lon}));
 });
 
@@ -250,6 +265,13 @@ function removeWaypoint(idx) {
   }
 }
 
+function onWpMarkerClick(idx) {
+  return function(e) {
+    L.DomEvent.stopPropagation(e);
+    removeWaypoint(idx);
+  };
+}
+
 function clearAllWaypoints() {
   waypointMarkers.forEach(function(w) { map.removeLayer(w.marker); });
   waypointMarkers = [];
@@ -259,7 +281,14 @@ function clearAllWaypoints() {
 }
 
 function toggleAddMode() {
-  // No-op - clicking always adds waypoints
+  addMode = !addMode;
+  var btn = document.querySelector('#toolbar button.danger');
+  if (btn) {
+    btn.textContent = addMode ? '- Stop Adding' : '+ Add Waypoint';
+    btn.style.background = addMode ? 'rgba(255,51,102,0.2)' : 'rgba(0,212,255,0.2)';
+    btn.style.borderColor = addMode ? 'rgba(255,51,102,0.5)' : 'rgba(0,212,255,0.5)';
+    btn.style.color = addMode ? '#FF3366' : '#00D4FF';
+  }
 }
 
 function updateRoute() {
@@ -275,7 +304,10 @@ function updateVehicle(lat, lon, heading) {
   vehicleMarker.setLatLng([lat, lon]);
   var el = vehicleMarker.getElement();
   if (el) { var svg = el.querySelector('svg'); if (svg) svg.style.transform = 'rotate(' + heading + 'deg)'; }
-  map.panTo([lat, lon], {animate: true, duration: 0.3});
+  if (firstPosition) {
+    map.setView([lat, lon], map.getZoom());
+    firstPosition = false;
+  }
 }
 
 function updateTrack(points) { trackLine.setLatLngs(points); }
@@ -295,7 +327,7 @@ function addWaypoint(lat, lon, index, alt, spd) {
     draggable: true,
     icon: L.divIcon({
       className: 'waypoint-icon',
-      html: '<div class=""waypoint-marker"" data-idx=""' + index + '"">' + index + '</div>',
+      html: '<div class=""waypoint-marker"" data-idx=""' + index + '"" onclick=""event.stopPropagation()"">' + index + '</div>',
       iconSize: [26, 26], iconAnchor: [13, 13]
     })
   }).addTo(map);
@@ -311,8 +343,8 @@ function addWaypoint(lat, lon, index, alt, spd) {
     '<input id=""wpSpd' + index + '"" type=""number"" value=""' + spd + '"" step=""0.1"" style=""width:100%;padding:4px;background:#21262D;color:#E6EDF3;border:1px solid #30363D;border-radius:4px"">' +
     '</div>' +
     '<div style=""margin:6px 0;display:flex;gap:4px"">' +
-    '<button onclick=""saveWpSettings(' + index + ')"" style=""flex:1;padding:4px;background:#00D4FF;color:#fff;border:none;border-radius:4px;cursor:pointer"">Save</button>' +
-    '<button onclick=""removeWaypoint(' + index + ')"" style=""flex:1;padding:4px;background:#FF3366;color:#fff;border:none;border-radius:4px;cursor:pointer"">Delete</button>' +
+    '<button onclick=""event.stopPropagation();saveWpSettings(' + index + ')"" style=""flex:1;padding:4px;background:#00D4FF;color:#fff;border:none;border-radius:4px;cursor:pointer"">Save</button>' +
+    '<button onclick=""event.stopPropagation();removeWaypoint(' + index + ')"" style=""flex:1;padding:4px;background:#FF3366;color:#fff;border:none;border-radius:4px;cursor:pointer"">Delete</button>' +
     '</div></div>';
   
   m.bindPopup(popupHtml, {maxWidth: 200});
@@ -359,7 +391,19 @@ function syncFromMission() {
   window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'syncMission'}));
 }
 
-function clearTrack() { trackLine.setLatLngs([]); }
+function clearTrack() { trackLine.setLatLngs([]); firstPosition = true; }
+
+function setVehicleType(type) {
+  if (vehicleIcons[type]) {
+    currentVehicleType = type;
+    var newIcon = L.divIcon({
+      className: 'vehicle-icon',
+      html: vehicleIcons[type],
+      iconSize: [30, 30], iconAnchor: [15, 15]
+    });
+    vehicleMarker.setIcon(newIcon);
+  }
+}
 </script>
 </body>
 </html>";
