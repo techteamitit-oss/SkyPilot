@@ -53,7 +53,8 @@ public class MapPanel : UserControl
             _webView = new Microsoft.Web.WebView2.WinForms.WebView2
             {
                 Dock = DockStyle.Fill,
-                DefaultBackgroundColor = System.Drawing.Color.FromArgb(13, 17, 23)
+                DefaultBackgroundColor = System.Drawing.Color.FromArgb(13, 17, 23),
+                Visible = false
             };
 
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(
@@ -65,6 +66,7 @@ public class MapPanel : UserControl
 
             Controls.Add(_webView);
             _webView.BringToFront();
+            _webView.Visible = true;
             _placeholder.Visible = false;
         }
         catch (Exception ex)
@@ -201,9 +203,9 @@ public class MapPanel : UserControl
   <button onclick=""syncFromMission()"">Sync Mission</button>
 </div>
 <script>
-var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false });
+var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false, zoomAnimation: true });
 L.control.zoom({ position: 'bottomright' }).addTo(map);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
 }).addTo(map);
 
@@ -275,14 +277,35 @@ function updateWpCount() {
   document.getElementById('wpcount').textContent = 'Waypoints: ' + waypointMarkers.length;
 }
 
+var firstUpdate = true;
+var mapReady = false;
 function updateVehicle(lat, lon, heading) {
   vehicleMarker.setLatLng([lat, lon]);
   var el = vehicleMarker.getElement();
   if (el) { var svg = el.querySelector('svg'); if (svg) svg.style.transform = 'rotate(' + heading + 'deg)'; }
-  map.panTo([lat, lon], {animate: true, duration: 0.3});
+  if (firstUpdate || !mapReady) {
+    map.setView([lat, lon], 16, {animate: false});
+    firstUpdate = false;
+    mapReady = true;
+  } else {
+    // Only pan slightly to keep vehicle visible
+    var currentCenter = map.getCenter();
+    var distLat = Math.abs(currentCenter.lat - lat);
+    var distLng = Math.abs(currentCenter.lng - lon);
+    if (distLat > 0.0005 || distLng > 0.0005) {
+      map.panTo([lat, lon], {animate: true, duration: 0.5});
+    }
+  }
 }
 
-function updateTrack(points) { trackLine.setLatLngs(points); }
+var trackInited = false;
+function updateTrack(points) {
+  if (points.length > 2) {
+    if (points.length > 500) points = points.slice(-500);
+    trackLine.setLatLngs(points);
+    // Don't zoom to fit - keep current view
+  }
+}
 
 function setHome(lat, lon) {
   if (homeMarker) map.removeLayer(homeMarker);
