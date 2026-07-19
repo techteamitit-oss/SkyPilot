@@ -135,12 +135,12 @@ public class MavlinkProcessor
 
     private void ProcessGpsRaw(MavlinkPacket p)
     {
-        _state.GpsFix = p.GetByte(4);
-        _state.Latitude = p.GetInt32(8) / 1e7;
-        _state.Longitude = p.GetInt32(12) / 1e7;
-        _state.AltitudeMsl = p.GetFloat(16);
-        _state.Hdop = p.GetUInt16(24) / 100f;
-        _state.SatelliteCount = p.GetByte(26);
+        _state.GpsFix = p.GetByte(8);
+        _state.Latitude = p.GetInt32(9) / 1e7;
+        _state.Longitude = p.GetInt32(13) / 1e7;
+        _state.AltitudeMsl = p.GetFloat(17);
+        _state.Hdop = p.GetUInt16(21) / 100f;
+        _state.SatelliteCount = p.GetByte(23);
     }
 
     private void ProcessScaledImu(MavlinkPacket p)
