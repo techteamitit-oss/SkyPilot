@@ -36,6 +36,7 @@ partial class MainForm
     private Panels.ModernButton navMap;
     private Panels.ModernButton navSim;
     private ComboBox cmbVehicle;
+    private ComboBox cmbPattern;
 
     // Action buttons
     private Panels.ModernButton btnArm;
@@ -151,6 +152,24 @@ partial class MainForm
         cmbVehicle.Items.AddRange(new object[] { "Plane", "Copter", "Rover" });
         cmbVehicle.SelectedIndex = 0;
         sidePanel.Controls.Add(cmbVehicle);
+
+        // Flight pattern selector
+        var patternLabel = new Label { Text = "PATTERN", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 310), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(patternLabel);
+
+        cmbPattern = new ComboBox
+        {
+            Location = new Point(8, 328),
+            Width = 144,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            BackColor = ModernTheme.SurfaceLight,
+            ForeColor = ModernTheme.TextPrimary,
+            Font = new Font("Segoe UI", 8.5f),
+            FlatStyle = FlatStyle.Standard
+        };
+        cmbPattern.Items.AddRange(new object[] { "Circle", "Point to Point", "Distance" });
+        cmbPattern.SelectedIndex = 0;
+        sidePanel.Controls.Add(cmbPattern);
         sidePanel.Controls.Add(navMap);
         sidePanel.Controls.Add(navLogs);
 

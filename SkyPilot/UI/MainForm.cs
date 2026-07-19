@@ -32,6 +32,7 @@ public partial class MainForm : Form
     private Panels.ModernButton? _activeNav;
     private Control? _activeContent;
     private string _selectedVehicleType = "plane";
+    private string _selectedPattern = "circle";
 
     // Borderless window dragging
     private bool _dragging;
@@ -156,6 +157,11 @@ public partial class MainForm : Form
         {
             if (cmbVehicle.SelectedItem is string type)
                 _selectedVehicleType = type.ToLower();
+        };
+        cmbPattern.SelectedIndexChanged += (s, e) =>
+        {
+            if (cmbPattern.SelectedItem is string pattern)
+                _selectedPattern = pattern.ToLower().Replace(" ", "");
         };
         navMap.Click += (s, e) => SwitchTab(navMap, _mapPanel!);
     }
@@ -320,7 +326,7 @@ public partial class MainForm : Form
             return;
         }
 
-        _sim = new VirtualVehicle(_selectedVehicleType);
+        _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern);
         SwitchTab(navMap, _mapPanel!);
         _stream.OpenSimulation(_sim);
         lblConnection.Text = "SIM (Plane)";
