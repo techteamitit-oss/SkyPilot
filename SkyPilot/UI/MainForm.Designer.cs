@@ -45,6 +45,7 @@ partial class MainForm
     private Panels.ModernButton btnDisarm;
     private Panels.ModernButton btnTakeoff;
     private Panels.ModernButton btnRTL;
+    private Panels.ModernButton btnManual;
     private Panels.ModernButton btnEmergencyStop;
     private Panels.ModernButton btnExit;
     private Panels.ModernButton btnConnect;
@@ -209,15 +210,17 @@ partial class MainForm
         btnDisarm = MakeTextButton("Disarm", 352, ModernTheme.Warning);
         btnTakeoff = MakeTextButton("Takeoff", 384, ModernTheme.Accent);
         btnRTL = MakeTextButton("RTL", 416, ModernTheme.Info);
+        btnManual = MakeTextButton("Manual Flight", 448, ModernTheme.Accent);
 
         sidePanel.Controls.Add(btnArm);
         sidePanel.Controls.Add(btnDisarm);
         sidePanel.Controls.Add(btnTakeoff);
         sidePanel.Controls.Add(btnRTL);
+        sidePanel.Controls.Add(btnManual);
 
         btnEmergencyStop = new Panels.ModernButton("EMERGENCY STOP", ModernTheme.Danger)
         {
-            Location = new Point(8, 453),
+            Location = new Point(8, 480),
             Width = 144,
             Height = 32
         };

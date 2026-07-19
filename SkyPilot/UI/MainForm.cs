@@ -29,6 +29,10 @@ public partial class MainForm : Form
     private ParameterPanel? _paramPanel;
     private MapPanel? _mapPanel;
     private AudioCallout? _audioCallout;
+    private VirtualStickControl? _virtualSticks;
+    private Panel? _mapContainer;
+    private Panel? _sticksPanel;
+    private bool _manualMode;
 
     // Nav state
     private Panels.ModernButton? _activeNav;
@@ -117,6 +121,28 @@ public partial class MainForm : Form
         _paramPanel = new ParameterPanel();
         _mapPanel = new MapPanel();
         _audioCallout = new AudioCallout();
+
+        // Map container with virtual sticks below
+        _sticksPanel = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 130,
+            BackColor = ModernTheme.Background
+        };
+        _virtualSticks = new VirtualStickControl
+        {
+            Dock = DockStyle.Fill
+        };
+        _virtualSticks.StickChanged += (lx, ly, rx, ry) =>
+        {
+            _sim?.SetManualInput(ly, lx, ry, rx);
+        };
+        _sticksPanel.Controls.Add(_virtualSticks);
+
+        _mapContainer = new Panel { Dock = DockStyle.Fill, BackColor = ModernTheme.Background };
+        _mapContainer.Controls.Add(_mapPanel);
+        _mapContainer.Controls.Add(_sticksPanel);
+        _sticksPanel.Visible = false; // hidden until simulator starts
         _mapPanel.WaypointAdded += (lat, lon, idx) =>
         {
             _missionPanel?.AddWaypointFromMap(lat, lon);
@@ -254,6 +280,15 @@ public partial class MainForm : Form
         btnDisarm.Click += (s, e) => SendCommand(MavlinkDefinitions.MAV_CMD_COMPONENT_ARM_DISARM, 0.0f);
         btnTakeoff.Click += (s, e) => TakeoffToolStripMenuItem_Click(s!, e);
         btnRTL.Click += (s, e) => SendCommand(MavlinkDefinitions.MAV_CMD_NAV_RETURN_TO_LAUNCH);
+        btnManual.Click += (s, e) =>
+        {
+            if (_sim == null) return;
+            _manualMode = !_manualMode;
+            _sim.SetManualMode(_manualMode);
+            btnManual.Text = _manualMode ? "AUTO Flight" : "Manual Flight";
+            btnManual.BaseColor = _manualMode ? ModernTheme.Warning : ModernTheme.Accent;
+            _messageLog?.AddMessage(_manualMode ? "Manual flight enabled" : "Auto flight resumed", 6);
+        };
         btnExit.Click += (s, e) => Close();
         btnEmergencyStop.Click += (s, e) =>
         {
@@ -360,10 +395,11 @@ public partial class MainForm : Form
             intermediateWaypoints: mapWps.Count > 0 ? mapWps : null,
             altitude: trackAlt.Value);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
-        SwitchTab(navMap, _mapPanel!);
+        SwitchTab(navMap, _mapContainer!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
             _sim.TargetLat, _sim.TargetLon, _selectedPattern, mapWps.Count > 0 ? mapWps : null);
         _stream.OpenSimulation(_sim);
+        _sticksPanel!.Visible = true;
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
         _messageLog?.AddMessage($"Sim: ({_sim.StartLat:F6},{_sim.StartLon:F6}) → ({_sim.TargetLat:F6},{_sim.TargetLon:F6})", 6);
@@ -377,6 +413,8 @@ public partial class MainForm : Form
             _sim = null;
             _vehicleState.IsConnected = false;
             _mapPanel?.HideFlightPath();
+            _sticksPanel!.Visible = false;
+            _manualMode = false;
             lblConnection.Text = "Disconnected";
             lblConnection.ForeColor = ModernTheme.TextMuted;
         }

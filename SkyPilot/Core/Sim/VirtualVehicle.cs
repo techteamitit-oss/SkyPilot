@@ -27,6 +27,8 @@ public class VirtualVehicle : IDisposable
     private int _currentLeg = 0;
     private bool _targetReached = false;
     private bool _returningHome = false;
+    private bool _manualMode = false;
+    private float _manualThrottle, _manualYaw, _manualPitch, _manualRoll;
 
     public event Action<MavlinkPacket>? PacketGenerated;
     public bool IsRunning { get; private set; }
@@ -102,6 +104,10 @@ public class VirtualVehicle : IDisposable
         {
             TickReturnHome();
         }
+        else if (_manualMode)
+        {
+            TickManual();
+        }
         else
         {
             switch (_pattern)
@@ -155,6 +161,33 @@ public class VirtualVehicle : IDisposable
         _lon += dlon * step / Math.Max(Math.Abs(dlat), Math.Abs(dlon));
         _heading = (float)((Math.Atan2(dlon, dlat) * 180.0 / Math.PI + 360) % 360);
         _altitude = Math.Max(_baseAlt, _altitude - 0.5f); // descend gradually
+    }
+
+    private void TickManual()
+    {
+        // Throttle controls altitude
+        _altitude += _manualThrottle * 2.0f;
+        _altitude = Math.Max(0, Math.Min(500, _altitude));
+
+        // Yaw controls heading
+        _heading += _manualYaw * 3.0f;
+        _heading = (_heading + 360) % 360;
+
+        // Pitch + Roll → movement
+        double speed = _manualPitch * 15.0;
+        double lateralSpeed = _manualRoll * 10.0;
+
+        double rad = _heading * Math.PI / 180.0;
+        double dlat = Math.Cos(rad) * speed * 0.00000898;
+        double dlon = Math.Sin(rad) * speed * 0.00000898 / Math.Cos(_lat * Math.PI / 180.0);
+
+        double latRad = rad + Math.PI / 2;
+        dlat += Math.Cos(latRad) * lateralSpeed * 0.00000898;
+        dlon += Math.Sin(latRad) * lateralSpeed * 0.00000898 / Math.Cos(_lat * Math.PI / 180.0);
+
+        _lat += dlat;
+        _lon += dlon;
+        _angle += 0.01;
     }
 
     private void TickPoint2Point()
@@ -404,6 +437,24 @@ public class VirtualVehicle : IDisposable
         _patternProgress = 0;
         _currentLeg = 0;
         SendStatustext("RETURNING TO HOME");
+    }
+
+    public void SetManualMode(bool enabled)
+    {
+        _manualMode = enabled;
+        if (enabled)
+        {
+            _returningHome = false;
+            SendStatustext("MANUAL MODE");
+        }
+    }
+
+    public void SetManualInput(float throttle, float yaw, float pitch, float roll)
+    {
+        _manualThrottle = throttle;
+        _manualYaw = yaw;
+        _manualPitch = pitch;
+        _manualRoll = roll;
     }
 
     public void SendStatustext(string text)
