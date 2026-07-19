@@ -223,7 +223,7 @@ partial class MainForm
         bottomBar = new Panel
         {
             Dock = DockStyle.Bottom,
-            Height = 28,
+            Height = 35,
             BackColor = ModernTheme.Surface
         };
 
