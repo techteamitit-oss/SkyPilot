@@ -39,6 +39,7 @@ public class MissionPanel : UserControl
         toolbar.Controls.Add(MakeButton("Load", (s, e) => LoadMission()));
         toolbar.Controls.Add(new Label { Text = "|", ForeColor = Color.Gray, AutoSize = false, Width = 10, Dock = DockStyle.None });
         toolbar.Controls.Add(MakeButton("Export KML", (s, e) => ExportKml()));
+        toolbar.Controls.Add(MakeButton("Import KML", (s, e) => ImportKml()));
 
         _grid = new DataGridView
         {
@@ -383,6 +384,71 @@ public class MissionPanel : UserControl
         File.WriteAllText(sfd.FileName, kml);
         MessageBox.Show($"KML exported: {_waypoints.Count} waypoints\n{sfd.FileName}",
             "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void ImportKml()
+    {
+        using var ofd = new OpenFileDialog { Filter = "KML files|*.kml|All files|*.*" };
+        if (ofd.ShowDialog() != DialogResult.OK) return;
+
+        try
+        {
+            string xml = File.ReadAllText(ofd.FileName);
+            var coords = new List<(double Lat, double Lon, double Alt)>();
+
+            // Parse coordinates from KML - look for <coordinates> tags
+            int idx = 0;
+            while ((idx = xml.IndexOf("<coordinates>", idx)) >= 0)
+            {
+                idx += 13;
+                int endIdx = xml.IndexOf("</coordinates>", idx);
+                if (endIdx < 0) break;
+
+                string coordBlock = xml.Substring(idx, endIdx - idx).Trim();
+                var lines = coordBlock.Split(new[] { ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var line in lines)
+                {
+                    var parts = line.Split(',');
+                    if (parts.Length >= 2)
+                    {
+                        double lon = double.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
+                        double lat = double.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+                        double alt = parts.Length > 2 ? double.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture) : 50;
+                        coords.Add((lat, lon, alt));
+                    }
+                }
+                break; // Only read first coordinates block (the route)
+            }
+
+            if (coords.Count == 0)
+            {
+                MessageBox.Show("No waypoints found in KML file.", "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Add as waypoints
+            _waypoints.Clear();
+            for (int i = 0; i < coords.Count; i++)
+            {
+                _waypoints.Add(new Waypoint
+                {
+                    Seq = i,
+                    Command = "WAYPOINT",
+                    Lat = coords[i].Lat,
+                    Lon = coords[i].Lon,
+                    Alt = coords[i].Alt
+                });
+            }
+            RefreshGrid();
+
+            MessageBox.Show($"Imported {coords.Count} waypoints from KML", "Import Complete",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error reading KML: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     public void SetWaypoints(List<Waypoint> waypoints)
