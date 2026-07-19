@@ -56,7 +56,15 @@ public class MissionPanel : UserControl
         };
 
         _grid.Columns.Add("Seq", "#");
-        _grid.Columns.Add("Command", "Command");
+
+        var cmdCol = new DataGridViewComboBoxColumn
+        {
+            Name = "Command",
+            HeaderText = "Command",
+            Items = { "WAYPOINT", "TAKEOFF", "LAND", "LOITER_UNLIM", "LOITER_TURNS", "LOITER_TIME", "RTL", "DO_CHANGE_SPEED", "DO_SET_ROI", "CONDITION_DELAY" }
+        };
+        _grid.Columns.Add(cmdCol);
+
         _grid.Columns.Add("Lat", "Latitude");
         _grid.Columns.Add("Lon", "Longitude");
         _grid.Columns.Add("Alt", "Alt (m)");
@@ -64,13 +72,6 @@ public class MissionPanel : UserControl
         _grid.Columns.Add("P2", "Param2");
         _grid.Columns.Add("P3", "Param3");
         _grid.Columns.Add("P4", "Param4");
-
-        var cmdCol = (DataGridViewComboBoxColumn)_grid.Columns["Command"]!;
-        cmdCol.Items.AddRange(new object[] {
-            "WAYPOINT", "TAKEOFF", "LAND", "LOITER_UNLIM",
-            "LOITER_TURNS", "LOITER_TIME", "RTL", "DO_CHANGE_SPEED",
-            "DO_SET_ROI", "CONDITION_DELAY"
-        });
 
         Controls.Add(_grid);
         Controls.Add(toolbar);
