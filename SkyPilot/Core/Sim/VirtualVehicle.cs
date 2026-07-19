@@ -26,6 +26,7 @@ public class VirtualVehicle : IDisposable
     private List<(double Lat, double Lon)> _routePoints = new();
     private int _currentLeg = 0;
     private bool _targetReached = false;
+    private bool _returningHome = false;
 
     public event Action<MavlinkPacket>? PacketGenerated;
     public bool IsRunning { get; private set; }
@@ -97,11 +98,18 @@ public class VirtualVehicle : IDisposable
         _bootMs += 250;
         _batteryPercent = Math.Max(0, _batteryPercent - 0.01);
 
-        switch (_pattern)
+        if (_returningHome)
         {
-            case "point2point": TickPoint2Point(); break;
-            case "distance": TickDistance(); break;
-            default: TickCircle(); break;
+            TickReturnHome();
+        }
+        else
+        {
+            switch (_pattern)
+            {
+                case "point2point": TickPoint2Point(); break;
+                case "distance": TickDistance(); break;
+                default: TickCircle(); break;
+            }
         }
 
         SendHeartbeat();
@@ -124,6 +132,29 @@ public class VirtualVehicle : IDisposable
         _lon = _startLon + Math.Sin(_angle) * 0.002;
         _altitude = _baseAlt + (float)Math.Sin(_angle * 2) * 10;
         _heading = (float)((_angle * 180.0 / Math.PI + 90) % 360);
+    }
+
+    private void TickReturnHome()
+    {
+        double dist = HaversineDistance(_lat, _lon, _startLat, _startLon);
+        if (dist < 5)
+        {
+            _returningHome = false;
+            _lat = _startLat;
+            _lon = _startLon;
+            _altitude = _baseAlt;
+            SendStatustext("HOME REACHED");
+            return;
+        }
+
+        // Fly toward start at cruise speed
+        double dlat = _startLat - _lat;
+        double dlon = _startLon - _lon;
+        double step = 0.00003; // ~3m per tick
+        _lat += dlat * step / Math.Max(Math.Abs(dlat), Math.Abs(dlon));
+        _lon += dlon * step / Math.Max(Math.Abs(dlat), Math.Abs(dlon));
+        _heading = (float)((Math.Atan2(dlon, dlat) * 180.0 / Math.PI + 360) % 360);
+        _altitude = Math.Max(_baseAlt, _altitude - 0.5f); // descend gradually
     }
 
     private void TickPoint2Point()
@@ -365,6 +396,16 @@ public class VirtualVehicle : IDisposable
 
     public void SetMode(int mode) => _flightMode = mode;
     public void SetArmed(bool armed) => _armed = armed;
+
+    public void ReturnToHome()
+    {
+        _returningHome = true;
+        _targetReached = false;
+        _patternProgress = 0;
+        _currentLeg = 0;
+        SendStatustext("RETURNING TO HOME");
+    }
+
     public void SendStatustext(string text)
     {
         var p = new byte[50];

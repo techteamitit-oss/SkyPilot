@@ -110,7 +110,9 @@ public class MavlinkStream : IDisposable
                 _sim.SendStatustext("Takeoff");
             }
             else if (cmd == MavlinkDefinitions.MAV_CMD_NAV_RETURN_TO_LAUNCH)
-                _sim.SendStatustext("RTL");
+            {
+                _sim.ReturnToHome();
+            }
             else if (cmd == MavlinkDefinitions.MAV_CMD_NAV_LAND)
                 _sim.SendStatustext("Land");
 
