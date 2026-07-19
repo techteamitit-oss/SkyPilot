@@ -1,10 +1,9 @@
-using System.Reflection;
 using SkyPilot.Utils;
 
 namespace SkyPilot.Panels;
 
 /// <summary>
-/// Interactive map panel using WebView2 + Leaflet/OpenStreetMap.
+/// Interactive map panel with click-to-add waypoint planning.
 /// </summary>
 public class MapPanel : UserControl
 {
@@ -12,6 +11,13 @@ public class MapPanel : UserControl
     private readonly Label _placeholder;
     private double _lastLat, _lastLon;
     private readonly List<(double Lat, double Lon)> _track = new();
+    private readonly List<(double Lat, double Lon, int Index)> _waypoints = new();
+
+    /// <summary>Fires when user clicks map to add a waypoint. Args: lat, lon, waypointIndex</summary>
+    public event Action<double, double, int>? WaypointAdded;
+
+    /// <summary>Fires when user right-clicks to remove a waypoint. Args: waypointIndex</summary>
+    public event Action<int>? WaypointRemoved;
 
     public MapPanel()
     {
@@ -20,7 +26,7 @@ public class MapPanel : UserControl
 
         _placeholder = new Label
         {
-            Text = "Loading map...\n\nIf map doesn't appear, install WebView2 Runtime:\nhttps://developer.microsoft.com/en-us/microsoft-edge/webview2/",
+            Text = "Loading map...\n\nClick on map to add waypoints\nRight-click waypoint to remove",
             ForeColor = ModernTheme.TextMuted,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -44,7 +50,10 @@ public class MapPanel : UserControl
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(
                 null, Path.Combine(Path.GetTempPath(), "SkyPilotWebView2"));
             await _webView.EnsureCoreWebView2Async(env);
+
+            _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
             _webView.NavigateToString(GetMapHtml());
+
             Controls.Add(_webView);
             _webView.BringToFront();
             _placeholder.Visible = false;
@@ -53,6 +62,30 @@ public class MapPanel : UserControl
         {
             _placeholder.Text = $"Map unavailable\n\n{ex.Message}\n\nInstall WebView2 Runtime";
         }
+    }
+
+    private void OnWebMessageReceived(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            string msg = e.WebMessageAsJson;
+            // Format: {"type":"addWaypoint","lat":51.5,"lon":-0.1}
+            // or: {"type":"removeWaypoint","index":2}
+            if (msg.Contains("addWaypoint"))
+            {
+                var lat = double.Parse(msg.Split("\"lat\":")[1].Split(",")[0]);
+                var lon = double.Parse(msg.Split("\"lon\":")[1].Split("}")[0]);
+                int idx = _waypoints.Count + 1;
+                _waypoints.Add((lat, lon, idx));
+                WaypointAdded?.Invoke(lat, lon, idx);
+            }
+            else if (msg.Contains("removeWaypoint"))
+            {
+                var idx = int.Parse(msg.Split("\"index\":")[1].Split("}")[0]);
+                WaypointRemoved?.Invoke(idx);
+            }
+        }
+        catch { }
     }
 
     public void UpdatePosition(double lat, double lon, float heading)
@@ -78,13 +111,20 @@ public class MapPanel : UserControl
         try { _webView?.CoreWebView2.ExecuteScriptAsync($"setHome({lat},{lon})"); } catch { }
     }
 
-    public void AddWaypointMarker(double lat, double lon, int index)
+    public void SyncWaypoints(List<(double Lat, double Lon)> waypoints)
     {
-        try { _webView?.CoreWebView2.ExecuteScriptAsync($"addWaypoint({lat},{lon},{index})"); } catch { }
+        _waypoints.Clear();
+        try { _webView?.CoreWebView2.ExecuteScriptAsync("clearWaypoints()"); } catch { }
+        for (int i = 0; i < waypoints.Count; i++)
+        {
+            _waypoints.Add((waypoints[i].Lat, waypoints[i].Lon, i + 1));
+            try { _webView?.CoreWebView2.ExecuteScriptAsync($"addWaypoint({waypoints[i].Lat},{waypoints[i].Lon},{i + 1})"); } catch { }
+        }
     }
 
     public void ClearWaypoints()
     {
+        _waypoints.Clear();
         try { _webView?.CoreWebView2.ExecuteScriptAsync("clearWaypoints()"); } catch { }
     }
 
@@ -103,67 +143,157 @@ public class MapPanel : UserControl
 <script src=""https://unpkg.com/leaflet@1.9.4/dist/leaflet.js""></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0D1117; overflow: hidden; }
+  body { background: #0D1117; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
   #map { width: 100vw; height: 100vh; }
   .vehicle-icon { background: none; border: none; }
   .vehicle-marker { width: 30px; height: 30px; }
-  .vehicle-marker svg { filter: drop-shadow(0 0 6px rgba(0,212,255,0.8)); }
+  .vehicle-marker svg { filter: drop-shadow(0 0 8px rgba(0,212,255,0.9)); }
   .waypoint-icon { background: none; border: none; }
   .waypoint-marker {
-    width: 24px; height: 24px; background: rgba(0,212,255,0.9);
+    width: 26px; height: 26px; background: rgba(0,212,255,0.95);
     border: 2px solid #fff; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: bold; color: #fff;
-    font-family: monospace; box-shadow: 0 0 8px rgba(0,212,255,0.6);
+    font-family: 'Cascadia Code', monospace;
+    box-shadow: 0 0 10px rgba(0,212,255,0.7);
+    cursor: pointer; transition: transform 0.2s;
   }
+  .waypoint-marker:hover { transform: scale(1.2); background: rgba(0,212,255,1); }
   .home-marker {
-    width: 20px; height: 20px; background: rgba(255,184,0,0.9);
+    width: 22px; height: 22px; background: rgba(255,184,0,0.95);
     border: 2px solid #fff; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; box-shadow: 0 0 8px rgba(255,184,0,0.6);
+    font-size: 11px; font-weight: bold; color: #fff;
+    box-shadow: 0 0 10px rgba(255,184,0,0.7);
   }
+  #toolbar {
+    position: absolute; top: 10px; right: 10px; z-index: 1000;
+    background: rgba(22,27,34,0.95); border-radius: 8px; padding: 8px;
+    border: 1px solid rgba(0,212,255,0.3);
+  }
+  #toolbar button {
+    background: rgba(0,212,255,0.2); border: 1px solid rgba(0,212,255,0.5);
+    color: #00D4FF; padding: 6px 12px; border-radius: 4px; cursor: pointer;
+    font-size: 11px; margin: 2px; font-family: 'Segoe UI', sans-serif;
+  }
+  #toolbar button:hover { background: rgba(0,212,255,0.4); }
+  #toolbar button.danger { background: rgba(255,51,102,0.2); border-color: rgba(255,51,102,0.5); color: #FF3366; }
+  #toolbar button.danger:hover { background: rgba(255,51,102,0.4); }
+  #wpcount { color: #8B949E; font-size: 11px; padding: 4px; }
 </style>
 </head>
 <body>
 <div id=""map""></div>
+<div id=""toolbar"">
+  <div id=""wpcount"">Waypoints: 0</div>
+  <button onclick=""clearAllWaypoints()"">Clear All</button>
+  <button class=""danger"" onclick=""toggleAddMode()"">+ Add Mode</button>
+</div>
 <script>
-var map = L.map('map', { center: [51.5074, -0.1278], zoom: 15, zoomControl: false });
+var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false });
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
 }).addTo(map);
+
 var vehicleIcon = L.divIcon({
   className: 'vehicle-icon',
   html: '<div class=""vehicle-marker""><svg viewBox=""0 0 24 24"" width=""30"" height=""30""><path fill=""#00D4FF"" d=""M12 2L4 20h3l5-14 5 14h3L12 2z""/></svg></div>',
   iconSize: [30, 30], iconAnchor: [15, 15]
 });
 var vehicleMarker = L.marker([51.5074, -0.1278], {icon: vehicleIcon}).addTo(map);
-var trackLine = L.polyline([], { color: '#00D4FF', weight: 2, opacity: 0.7 }).addTo(map);
+var trackLine = L.polyline([], { color: '#00D4FF', weight: 2, opacity: 0.6 }).addTo(map);
+var routeLine = L.polyline([], { color: '#FF3366', weight: 2, opacity: 0.8, dashArray: '8,8' }).addTo(map);
 var waypointMarkers = [];
 var homeMarker = null;
+var addMode = false;
+var waypointIndex = 0;
+
+// Click to add waypoint
+map.on('click', function(e) {
+  if (!addMode) return;
+  waypointIndex++;
+  var lat = e.latlng.lat;
+  var lon = e.latlng.lng;
+  var marker = L.marker([lat, lon], {icon: L.divIcon({
+    className: 'waypoint-icon',
+    html: '<div class=""waypoint-marker"" data-idx=""' + waypointIndex + '"" onclick=""removeWaypoint(' + waypointIndex + ')"">' + waypointIndex + '</div>',
+    iconSize: [26, 26], iconAnchor: [13, 13]
+  })}).addTo(map);
+  marker.bindPopup('WP' + waypointIndex + '<br><small>Click marker to remove</small>');
+  waypointMarkers.push({marker: marker, index: waypointIndex, lat: lat, lon: lon});
+  updateRoute();
+  updateWpCount();
+  // Send to C#
+  window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'addWaypoint', lat:lat, lon:lon}));
+});
+
+function removeWaypoint(idx) {
+  var i = waypointMarkers.findIndex(function(w) { return w.index === idx; });
+  if (i >= 0) {
+    map.removeLayer(waypointMarkers[i].marker);
+    waypointMarkers.splice(i, 1);
+    updateRoute();
+    updateWpCount();
+    window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'removeWaypoint', index:idx}));
+  }
+}
+
+function clearAllWaypoints() {
+  waypointMarkers.forEach(function(w) { map.removeLayer(w.marker); });
+  waypointMarkers = [];
+  routeLine.setLatLngs([]);
+  waypointIndex = 0;
+  updateWpCount();
+}
+
+function toggleAddMode() {
+  addMode = !addMode;
+  var btn = document.querySelector('#toolbar button.danger');
+  btn.textContent = addMode ? '■ Stop Adding' : '+ Add Mode';
+  btn.style.background = addMode ? 'rgba(255,51,102,0.5)' : 'rgba(255,51,102,0.2)';
+  map.getContainer().style.cursor = addMode ? 'crosshair' : '';
+}
+
+function updateRoute() {
+  var coords = waypointMarkers.map(function(w) { return [w.lat, w.lon]; });
+  routeLine.setLatLngs(coords);
+}
+
+function updateWpCount() {
+  document.getElementById('wpcount').textContent = 'Waypoints: ' + waypointMarkers.length;
+}
+
 function updateVehicle(lat, lon, heading) {
   vehicleMarker.setLatLng([lat, lon]);
   var el = vehicleMarker.getElement();
   if (el) { var svg = el.querySelector('svg'); if (svg) svg.style.transform = 'rotate(' + heading + 'deg)'; }
-  map.panTo([lat, lon], {animate: true, duration: 0.5});
+  map.panTo([lat, lon], {animate: true, duration: 0.3});
 }
+
 function updateTrack(points) { trackLine.setLatLngs(points); }
+
 function setHome(lat, lon) {
   if (homeMarker) map.removeLayer(homeMarker);
   homeMarker = L.marker([lat, lon], {icon: L.divIcon({
     className: 'waypoint-icon', html: '<div class=""home-marker"">H</div>',
-    iconSize: [20, 20], iconAnchor: [10, 10]
+    iconSize: [22, 22], iconAnchor: [11, 11]
   })}).addTo(map);
 }
+
 function addWaypoint(lat, lon, index) {
   var m = L.marker([lat, lon], {icon: L.divIcon({
-    className: 'waypoint-icon', html: '<div class=""waypoint-marker"">' + index + '</div>',
-    iconSize: [24, 24], iconAnchor: [12, 12]
+    className: 'waypoint-icon',
+    html: '<div class=""waypoint-marker"" data-idx=""' + index + '"" onclick=""removeWaypoint(' + index + ')"">' + index + '</div>',
+    iconSize: [26, 26], iconAnchor: [13, 13]
   })}).addTo(map);
   m.bindPopup('WP' + index);
-  waypointMarkers.push(m);
+  waypointMarkers.push({marker: m, index: index, lat: lat, lon: lon});
+  updateRoute();
+  updateWpCount();
 }
-function clearWaypoints() { waypointMarkers.forEach(function(m) { map.removeLayer(m); }); waypointMarkers = []; }
+
+function clearWaypoints() { clearAllWaypoints(); }
 function clearTrack() { trackLine.setLatLngs([]); }
 </script>
 </body>

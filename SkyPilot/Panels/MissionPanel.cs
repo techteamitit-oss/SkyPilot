@@ -393,6 +393,11 @@ public class MissionPanel : UserControl
     }
 
     public List<Waypoint> GetWaypoints() => new(_waypoints);
+
+    public void AddWaypointFromMap(double lat, double lon)
+    {
+        AddWaypointCommand("WAYPOINT", lat, lon, 50);
+    }
 }
 
 public class Waypoint

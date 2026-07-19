@@ -109,6 +109,10 @@ public partial class MainForm : Form
         _missionPanel = new MissionPanel();
         _paramPanel = new ParameterPanel();
         _mapPanel = new MapPanel();
+        _mapPanel.WaypointAdded += (lat, lon, idx) =>
+        {
+            _missionPanel?.AddWaypointFromMap(lat, lon);
+        };
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
     }
