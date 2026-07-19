@@ -36,6 +36,9 @@ public class MapPanel : UserControl
     /// <summary>Fires when user sets simulator target on map. Args: lat, lon</summary>
     public event Action<double, double>? SimTargetPosReceived;
 
+    /// <summary>Fires when user clicks FPV toggle on map toolbar</summary>
+    public event Action? FPVToggleRequested;
+
     public MapPanel()
     {
         Dock = DockStyle.Fill;
@@ -131,6 +134,10 @@ public class MapPanel : UserControl
                 SimTargetPosReceived?.Invoke(
                     root.GetProperty("lat").GetDouble(),
                     root.GetProperty("lon").GetDouble());
+            }
+            else if (type == "toggleFPV")
+            {
+                FPVToggleRequested?.Invoke();
             }
         }
         catch { }
@@ -270,6 +277,7 @@ public class MapPanel : UserControl
   <button id=""btnSetTarget"" onclick=""setTargetClick()"">Set Target</button>
   <button onclick=""exportKML()"">Export KML</button>
   <button onclick=""syncFromMission()"">Sync Mission</button>
+  <button onclick=""toggleFPV()"">FPV</button>
 </div>
 <script>
 var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false, attributionControl: false });
@@ -427,6 +435,10 @@ function setTargetClick() {
   s.textContent = 'Set Start';
   s.style.background = '';
   s.style.color = '';
+}
+
+function toggleFPV() {
+  window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'toggleFPV'}));
 }
 
 function updateRoute() {

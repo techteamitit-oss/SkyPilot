@@ -31,9 +31,11 @@ public partial class MainForm : Form
     private AudioCallout? _audioCallout;
     private VirtualStickControl? _virtualSticks;
     private TelemetryHUD? _telemetryHud;
+    private FPVPanel? _fpvPanel;
     private Panel? _mapContainer;
     private Panel? _sticksPanel;
     private bool _manualMode;
+    private bool _fpvVisible;
 
     // Nav state
     private Panels.ModernButton? _activeNav;
@@ -147,6 +149,8 @@ public partial class MainForm : Form
             Location = new Point(10, 10),
             Anchor = AnchorStyles.Top | AnchorStyles.Left
         };
+        _fpvPanel = new FPVPanel { Dock = DockStyle.Fill, Visible = false };
+        _mapContainer.Controls.Add(_fpvPanel);
         _mapContainer.Controls.Add(_telemetryHud);
         _mapContainer.Controls.Add(_mapPanel);
         _mapContainer.Controls.Add(_sticksPanel);
@@ -194,6 +198,13 @@ public partial class MainForm : Form
             _simTargetLat = lat;
             _simTargetLon = lon;
             _messageLog?.AddMessage($"Target set: ({lat:F6},{lon:F6})", 6);
+        };
+        _mapPanel.FPVToggleRequested += () =>
+        {
+            _fpvVisible = !_fpvVisible;
+            _fpvPanel!.Visible = _fpvVisible;
+            _mapPanel!.Visible = !_fpvVisible;
+            _telemetryHud!.Visible = !_fpvVisible && _sim != null;
         };
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
@@ -555,6 +566,15 @@ public partial class MainForm : Form
             _vehicleState.FlightModeName,
             _vehicleState.IsArmed,
             _vehicleState.SatelliteCount);
+
+        // Update FPV
+        _fpvPanel?.UpdateAttitude(
+            _vehicleState.Pitch,
+            _vehicleState.Roll,
+            _vehicleState.Yaw,
+            _vehicleState.AltitudeRel,
+            _vehicleState.GroundSpeed,
+            _sim != null ? 0.7f : 0);
     }
 
     private void ExportKml(string path, List<Waypoint> waypoints)
