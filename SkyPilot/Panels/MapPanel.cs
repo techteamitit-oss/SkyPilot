@@ -16,6 +16,9 @@ public class MapPanel : UserControl
     /// <summary>Fires when user clicks map to add a waypoint. Args: lat, lon, waypointIndex</summary>
     public event Action<double, double, int>? WaypointAdded;
 
+    /// <summary>Fires when waypoint is updated (moved or settings changed). Args: index, lat, lon, alt, spd</summary>
+    public event Action<int, double, double, double, double>? WaypointUpdated;
+
     /// <summary>Fires when user right-clicks to remove a waypoint. Args: waypointIndex</summary>
     public event Action<int>? WaypointRemoved;
 
@@ -281,16 +284,34 @@ function setHome(lat, lon) {
   })}).addTo(map);
 }
 
-function addWaypoint(lat, lon, index) {
+function addWaypoint(lat, lon, index, alt, spd) {
+  alt = alt || 50;
+  spd = spd || 10;
   var m = L.marker([lat, lon], {
     draggable: true,
     icon: L.divIcon({
       className: 'waypoint-icon',
-      html: '<div class=""waypoint-marker"" data-idx=""' + index + '"" onclick=""removeWaypoint(' + index + ')"">' + index + '</div>',
+      html: '<div class=""waypoint-marker"" data-idx=""' + index + '"">' + index + '</div>',
       iconSize: [26, 26], iconAnchor: [13, 13]
     })
   }).addTo(map);
-  m.bindPopup('WP' + index + '<br><small>Drag to move | Click to remove</small>');
+  
+  var popupHtml = '<div style=""font-family:Segoe UI;font-size:12px;min-width:150px"">' +
+    '<b style=""color:#00D4FF"">WP' + index + '</b><br>' +
+    '<div style=""margin:6px 0"">' +
+    '<label style=""color:#8B949E"">Altitude (m):</label><br>' +
+    '<input id=""wpAlt' + index + '"" type=""number"" value=""' + alt + '"" style=""width:100%;padding:4px;background:#21262D;color:#E6EDF3;border:1px solid #30363D;border-radius:4px"">' +
+    '</div>' +
+    '<div style=""margin:6px 0"">' +
+    '<label style=""color:#8B949E"">Speed (m/s):</label><br>' +
+    '<input id=""wpSpd' + index + '"" type=""number"" value=""' + spd + '"" step=""0.1"" style=""width:100%;padding:4px;background:#21262D;color:#E6EDF3;border:1px solid #30363D;border-radius:4px"">' +
+    '</div>' +
+    '<div style=""margin:6px 0;display:flex;gap:4px"">' +
+    '<button onclick=""saveWpSettings(' + index + ')"" style=""flex:1;padding:4px;background:#00D4FF;color:#fff;border:none;border-radius:4px;cursor:pointer"">Save</button>' +
+    '<button onclick=""removeWaypoint(' + index + ')"" style=""flex:1;padding:4px;background:#FF3366;color:#fff;border:none;border-radius:4px;cursor:pointer"">Delete</button>' +
+    '</div></div>';
+  
+  m.bindPopup(popupHtml, {maxWidth: 200});
   m.on('dragend', function(e) {
     var pos = e.target.getLatLng();
     var wi = waypointMarkers.findIndex(function(w) { return w.index === index; });
@@ -298,12 +319,30 @@ function addWaypoint(lat, lon, index) {
       waypointMarkers[wi].lat = pos.lat;
       waypointMarkers[wi].lon = pos.lng;
       updateRoute();
-      window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'waypointMoved', index:index, lat:pos.lat, lon:pos.lng}));
+      sendWpUpdate(waypointMarkers[wi]);
     }
   });
-  waypointMarkers.push({marker: m, index: index, lat: lat, lon: lon});
+  waypointMarkers.push({marker: m, index: index, lat: lat, lon: lon, alt: alt, spd: spd});
   updateRoute();
   updateWpCount();
+}
+
+function saveWpSettings(idx) {
+  var altInput = document.getElementById('wpAlt' + idx);
+  var spdInput = document.getElementById('wpSpd' + idx);
+  var wi = waypointMarkers.findIndex(function(w) { return w.index === idx; });
+  if (wi >= 0) {
+    waypointMarkers[wi].alt = parseFloat(altInput.value) || 50;
+    waypointMarkers[wi].spd = parseFloat(spdInput.value) || 10;
+    sendWpUpdate(waypointMarkers[wi]);
+    map.closePopup();
+  }
+}
+
+function sendWpUpdate(wp) {
+  window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({
+    type:'waypointUpdated', index:wp.index, lat:wp.lat, lon:wp.lon, alt:wp.alt, spd:wp.spd
+  }));
 }
 
 function clearWaypoints() { clearAllWaypoints(); }

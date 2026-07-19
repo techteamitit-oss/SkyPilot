@@ -398,6 +398,19 @@ public class MissionPanel : UserControl
     {
         AddWaypointCommand("WAYPOINT", lat, lon, 50);
     }
+
+    public void UpdateWaypointFromMap(int index, double lat, double lon, double alt, double spd)
+    {
+        var wp = _waypoints.FirstOrDefault(w => w.Seq == index);
+        if (wp != null)
+        {
+            wp.Lat = lat;
+            wp.Lon = lon;
+            wp.Alt = alt;
+            wp.Param2 = spd; // Speed stored in Param2
+            RefreshGrid();
+        }
+    }
 }
 
 public class Waypoint
