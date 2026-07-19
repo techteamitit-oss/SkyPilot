@@ -150,6 +150,12 @@ public partial class MainForm : Form
             Anchor = AnchorStyles.Top | AnchorStyles.Left
         };
         _fpvPanel = new FPVPanel { Dock = DockStyle.Fill, Visible = false };
+        _fpvPanel.RecordingSaved += (path) =>
+        {
+            _messageLog?.AddMessage($"Recording saved: {path}", 6);
+            MessageBox.Show($"FPV recording saved to:\n{path}", "Recording Saved",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        };
         _mapContainer.Controls.Add(_fpvPanel);
         _mapContainer.Controls.Add(_telemetryHud);
         _mapContainer.Controls.Add(_mapPanel);

@@ -13,6 +13,15 @@ public class FPVPanel : UserControl
     private float _altitude, _speed;
     private float _throttle;
     private readonly MiniMapControl _miniMap;
+    private bool _recording;
+    private string? _recordDir;
+    private int _frameCount;
+    private System.Windows.Forms.Timer? _captureTimer;
+    private Button _recBtn;
+
+    public bool IsRecording => _recording;
+
+    public event Action<string>? RecordingSaved;
 
     public FPVPanel()
     {
@@ -27,6 +36,22 @@ public class FPVPanel : UserControl
             Anchor = AnchorStyles.Top | AnchorStyles.Left
         };
         Controls.Add(_miniMap);
+
+        _recBtn = new Button
+        {
+            Text = "REC",
+            Size = new Size(60, 28),
+            Location = new Point(10, 175),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left,
+            BackColor = Color.FromArgb(200, 40, 40, 40),
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+        _recBtn.FlatAppearance.BorderSize = 0;
+        _recBtn.Click += (s, e) => ToggleRecording();
+        Controls.Add(_recBtn);
     }
 
     public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle)
@@ -43,6 +68,132 @@ public class FPVPanel : UserControl
     public void UpdatePosition(double lat, double lon, float heading)
     {
         _miniMap.UpdatePosition(lat, lon, heading);
+    }
+
+    private void ToggleRecording()
+    {
+        if (_recording)
+        {
+            StopRecording();
+        }
+        else
+        {
+            StartRecording();
+        }
+    }
+
+    private void StartRecording()
+    {
+        _recordDir = Path.Combine(Path.GetTempPath(), "SkyPilot_Recording_" + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+        Directory.CreateDirectory(_recordDir);
+        _frameCount = 0;
+        _recording = true;
+        _recBtn.Text = "STOP";
+        _recBtn.BackColor = Color.FromArgb(220, 200, 30, 30);
+
+        _captureTimer = new System.Windows.Forms.Timer { Interval = 33 }; // ~30fps
+        _captureTimer.Tick += (s, e) => CaptureFrame();
+        _captureTimer.Start();
+    }
+
+    private void StopRecording()
+    {
+        _recording = false;
+        _captureTimer?.Stop();
+        _captureTimer?.Dispose();
+        _captureTimer = null;
+        _recBtn.Text = "REC";
+        _recBtn.BackColor = Color.FromArgb(200, 40, 40, 40);
+
+        if (_recordDir == null) return;
+
+        int frames = _frameCount;
+        string outputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "SkyPilot");
+        Directory.CreateDirectory(outputDir);
+        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+        // Try to create MP4 with ffmpeg
+        string ffmpegPath = FindFfmpeg();
+        if (ffmpegPath != null && frames > 0)
+        {
+            string mp4Path = Path.Combine(outputDir, $"SkyPilot_FPV_{timestamp}.mp4");
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = ffmpegPath,
+                    Arguments = $"-y -framerate 30 -i \"{_recordDir}/frame_%05d.png\" -c:v libx264 -pix_fmt yuv420p \"{mp4Path}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true
+                };
+                var proc = System.Diagnostics.Process.Start(psi);
+                proc?.WaitForExit(30000);
+
+                if (File.Exists(mp4Path))
+                {
+                    RecordingSaved?.Invoke(mp4Path);
+                    // Clean up frames
+                    try { Directory.Delete(_recordDir, true); } catch { }
+                    _recordDir = null;
+                    return;
+                }
+            }
+            catch { }
+        }
+
+        // Fallback: keep PNG frames
+        string framesDir = Path.Combine(outputDir, $"SkyPilot_FPV_{timestamp}_frames");
+        try
+        {
+            if (Directory.Exists(framesDir)) Directory.Delete(framesDir, true);
+            Directory.Move(_recordDir, framesDir);
+            RecordingSaved?.Invoke(framesDir);
+        }
+        catch
+        {
+            RecordingSaved?.Invoke(_recordDir);
+        }
+        _recordDir = null;
+    }
+
+    private void CaptureFrame()
+    {
+        if (_recordDir == null || !Visible) return;
+        try
+        {
+            var bmp = new Bitmap(Width, Height);
+            DrawToBitmap(bmp, new Rectangle(0, 0, Width, Height));
+            _frameCount++;
+            bmp.Save(Path.Combine(_recordDir, $"frame_{_frameCount:D5}.png"), System.Drawing.Imaging.ImageFormat.Png);
+            bmp.Dispose();
+        }
+        catch { }
+    }
+
+    private static string FindFfmpeg()
+    {
+        // Check common locations
+        string[] paths = { "ffmpeg", @"C:\ffmpeg\bin\ffmpeg.exe", @"C:\Program Files\ffmpeg\bin\ffmpeg.exe" };
+        foreach (var p in paths)
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = p,
+                    Arguments = "-version",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true
+                };
+                var proc = System.Diagnostics.Process.Start(psi);
+                proc?.WaitForExit(2000);
+                if (proc != null && proc.ExitCode == 0) return p;
+            }
+            catch { }
+        }
+        return null;
     }
 
     protected override void OnPaint(PaintEventArgs e)
