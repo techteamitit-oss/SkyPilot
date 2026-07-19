@@ -3,39 +3,48 @@ using System.Drawing.Drawing2D;
 namespace SkyPilot.Utils;
 
 /// <summary>
-/// Modern dark theme colors and drawing helpers.
+/// Neon glass cockpit theme - deep navy + cyan accents.
 /// </summary>
 public static class ModernTheme
 {
-    // Colors
-    public static readonly Color Background = Color.FromArgb(18, 18, 24);
-    public static readonly Color Surface = Color.FromArgb(26, 26, 35);
-    public static readonly Color SurfaceLight = Color.FromArgb(34, 34, 46);
-    public static readonly Color Border = Color.FromArgb(45, 45, 60);
-    public static readonly Color TextPrimary = Color.FromArgb(240, 240, 245);
-    public static readonly Color TextSecondary = Color.FromArgb(140, 140, 160);
-    public static readonly Color TextMuted = Color.FromArgb(90, 90, 110);
-    public static readonly Color Accent = Color.FromArgb(80, 140, 255);      // Blue
-    public static readonly Color AccentHover = Color.FromArgb(100, 160, 255);
-    public static readonly Color Success = Color.FromArgb(60, 200, 120);     // Green
-    public static readonly Color Warning = Color.FromArgb(255, 180, 50);     // Orange
-    public static readonly Color Danger = Color.FromArgb(255, 70, 80);       // Red
-    public static readonly Color Info = Color.FromArgb(100, 200, 255);       // Cyan
-    public static readonly Color Armed = Color.FromArgb(255, 60, 70);
-    public static readonly Color Disarmed = Color.FromArgb(60, 200, 120);
-    public static readonly Color GradientStart = Color.FromArgb(30, 30, 42);
-    public static readonly Color GradientEnd = Color.FromArgb(20, 20, 28);
+    // Core palette
+    public static readonly Color Background = Color.FromArgb(13, 17, 23);     // #0D1117
+    public static readonly Color Surface = Color.FromArgb(22, 27, 34);       // #161B22
+    public static readonly Color SurfaceLight = Color.FromArgb(33, 38, 45);  // #21262D
+    public static readonly Color Border = Color.FromArgb(48, 54, 61);        // #30363D
+    public static readonly Color BorderLight = Color.FromArgb(68, 76, 86);   // #484F58
+
+    // Text
+    public static readonly Color TextPrimary = Color.FromArgb(230, 237, 243); // #E6EDF3
+    public static readonly Color TextSecondary = Color.FromArgb(139, 148, 158); // #8B949E
+    public static readonly Color TextMuted = Color.FromArgb(110, 118, 129);  // #6E7681
+
+    // Accents - neon
+    public static readonly Color Accent = Color.FromArgb(0, 212, 255);       // Cyan #00D4FF
+    public static readonly Color AccentDim = Color.FromArgb(0, 120, 150);    // Dim cyan
+    public static readonly Color Success = Color.FromArgb(0, 255, 136);      // Neon green #00FF88
+    public static readonly Color Warning = Color.FromArgb(255, 184, 0);      // Amber #FFB800
+    public static readonly Color Danger = Color.FromArgb(255, 51, 102);      // Hot pink #FF3366
+    public static readonly Color Info = Color.FromArgb(130, 200, 255);       // Light cyan
+
+    // Status
+    public static readonly Color Armed = Color.FromArgb(255, 51, 102);
+    public static readonly Color Disarmed = Color.FromArgb(0, 255, 136);
+
+    // Glow helpers
+    public static readonly Color GlowCyan = Color.FromArgb(40, 0, 212, 255);
+    public static readonly Color GlowGreen = Color.FromArgb(40, 0, 255, 136);
+    public static readonly Color GlowPink = Color.FromArgb(40, 255, 51, 102);
 
     // Fonts
     public static readonly Font FontRegular = new("Segoe UI", 9.5f);
     public static readonly Font FontBold = new("Segoe UI", 9.5f, FontStyle.Bold);
     public static readonly Font FontSmall = new("Segoe UI", 8.5f);
     public static readonly Font FontTitle = new("Segoe UI", 14f, FontStyle.Bold);
-    public static readonly Font FontValue = new("Segoe UI", 20f, FontStyle.Bold);
     public static readonly Font FontMono = new("Cascadia Code", 9f);
 
     /// <summary>
-    /// Draw a rounded rectangle with optional gradient fill.
+    /// Draw a rounded rectangle.
     /// </summary>
     public static GraphicsPath RoundedRect(Rectangle bounds, int radius)
     {
@@ -50,50 +59,39 @@ public static class ModernTheme
     }
 
     /// <summary>
-    /// Draw a card with subtle border and gradient background.
+    /// Draw a glass-panel card.
     /// </summary>
-    public static void DrawCard(Graphics g, Rectangle bounds, Color? fillColor = null)
+    public static void DrawGlassCard(Graphics g, Rectangle bounds, Color? accentColor = null)
     {
-        int radius = 8;
+        int radius = 10;
         using var path = RoundedRect(bounds, radius);
-        using var brush = new LinearGradientBrush(bounds, fillColor ?? Surface, SurfaceLight, LinearGradientMode.Vertical);
+
+        // Fill
+        using var brush = new SolidBrush(Surface);
         g.FillPath(brush, path);
-        using var borderPen = new Pen(Border, 1);
+
+        // Border with accent
+        var accent = accentColor ?? Accent;
+        using var borderPen = new Pen(Color.FromArgb(30, accent), 1);
         g.DrawPath(borderPen, path);
+
+        // Top highlight line
+        using var highlightPen = new Pen(Color.FromArgb(15, 255, 255, 255), 1);
+        g.DrawLine(highlightPen, bounds.X + radius, bounds.Y + 1, bounds.Right - radius, bounds.Y + 1);
     }
 
     /// <summary>
-    /// Draw a modern gradient button.
-    /// </summary>
-    public static void DrawButton(Graphics g, Rectangle bounds, string text, Color baseColor, bool hovered, bool pressed)
-    {
-        int radius = 6;
-        using var path = RoundedRect(bounds, radius);
-
-        Color top = hovered ? ControlPaint.Light(baseColor, 0.2f) : baseColor;
-        Color bottom = hovered ? baseColor : ControlPaint.Dark(baseColor, 0.1f);
-        if (pressed) { top = ControlPaint.Dark(baseColor, 0.1f); bottom = ControlPaint.Dark(baseColor, 0.2f); }
-
-        using var brush = new LinearGradientBrush(bounds, top, bottom, LinearGradientMode.Vertical);
-        g.FillPath(brush, path);
-
-        using var textBrush = new SolidBrush(TextPrimary);
-        var textSize = g.MeasureString(text, FontRegular);
-        g.DrawString(text, FontRegular, textBrush,
-            bounds.X + (bounds.Width - textSize.Width) / 2,
-            bounds.Y + (bounds.Height - textSize.Height) / 2);
-    }
-
-    /// <summary>
-    /// Draw a stat card with icon, label, and value.
+    /// Draw a stat card with accent bar and glow.
     /// </summary>
     public static void DrawStatCard(Graphics g, Rectangle bounds, string label, string value,
         Color valueColor, Color? iconColor = null)
     {
-        DrawCard(g, bounds);
+        DrawGlassCard(g, bounds, iconColor);
 
-        // Left accent bar
+        // Left accent bar with glow
         int barW = 3;
+        using var glowBrush = new SolidBrush(Color.FromArgb(30, iconColor ?? Accent));
+        g.FillRectangle(glowBrush, bounds.X + 2, bounds.Y + 6, 6, bounds.Height - 12);
         using var barBrush = new SolidBrush(iconColor ?? Accent);
         using var barPath = RoundedRect(new Rectangle(bounds.X, bounds.Y + 4, barW, bounds.Height - 8), 2);
         g.FillPath(barBrush, barPath);
@@ -103,35 +101,20 @@ public static class ModernTheme
         using var labelBrush = new SolidBrush(TextSecondary);
         g.DrawString(label, FontSmall, labelBrush, bounds.X + padX, bounds.Y + 10);
 
-        // Value
+        // Value (monospace)
+        using var valueFont = new Font("Cascadia Code", 16f, FontStyle.Bold);
         using var valueBrush = new SolidBrush(valueColor);
-        g.DrawString(value, FontValue, valueBrush, bounds.X + padX, bounds.Y + 26);
+        g.DrawString(value, valueFont, valueBrush, bounds.X + padX, bounds.Y + 28);
     }
 
     /// <summary>
-    /// Draw a progress bar with gradient.
+    /// Draw a dot grid background pattern.
     /// </summary>
-    public static void DrawProgressBar(Graphics g, Rectangle bounds, float value, float max,
-        Color? color = null)
+    public static void DrawGridBackground(Graphics g, Rectangle bounds, int spacing = 30)
     {
-        int radius = 4;
-        float pct = Math.Clamp(value / max, 0, 1);
-        Color barColor = color ?? (pct < 0.5f ? Success : pct < 0.8f ? Warning : Danger);
-
-        // Background
-        using var bgPath = RoundedRect(bounds, radius);
-        using var bgBrush = new SolidBrush(SurfaceLight);
-        g.FillPath(bgBrush, bgPath);
-
-        // Fill
-        if (pct > 0.01f)
-        {
-            int fillW = Math.Max(radius * 2, (int)(bounds.Width * pct));
-            var fillBounds = new Rectangle(bounds.X, bounds.Y, fillW, bounds.Height);
-            using var fillPath = RoundedRect(fillBounds, radius);
-            using var fillBrush = new LinearGradientBrush(fillBounds,
-                ControlPaint.Light(barColor, 0.3f), barColor, LinearGradientMode.Vertical);
-            g.FillPath(fillBrush, fillPath);
-        }
+        using var dotBrush = new SolidBrush(Color.FromArgb(15, 255, 255, 255));
+        for (int x = bounds.X; x < bounds.Right; x += spacing)
+            for (int y = bounds.Y; y < bounds.Bottom; y += spacing)
+                g.FillEllipse(dotBrush, x, y, 1, 1);
     }
 }

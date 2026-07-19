@@ -7,7 +7,7 @@ using SkyPilot.Utils;
 namespace SkyPilot.UI;
 
 /// <summary>
-/// Main application window with modern UI.
+/// Main application window - borderless glass cockpit design.
 /// </summary>
 public partial class MainForm : Form
 {
@@ -22,14 +22,18 @@ public partial class MainForm : Form
     // Panels
     private OverviewPanel? _overviewPanel;
     private SensorDashboardPanel? _sensorsPanel;
-    private HudPanel? _hudPanel;
+    private NeonHud? _hudPanel;
     private MessageLogPanel? _messageLog;
     private MissionPanel? _missionPanel;
     private ParameterPanel? _paramPanel;
 
-    // Current nav
+    // Nav state
     private Panels.ModernButton? _activeNav;
     private Control? _activeContent;
+
+    // Borderless window dragging
+    private bool _dragging;
+    private Point _dragStart;
 
     public MainForm()
     {
@@ -53,10 +57,10 @@ public partial class MainForm : Form
         {
             string resultText = result switch
             {
-                0 => "Accepted", 1 => "Temp Rejected", 2 => "Denied",
-                3 => "Unsupported", 4 => "Failed", _ => $"Result {result}"
+                0 => "OK", 1 => "Rejected", 2 => "Denied",
+                3 => "Unsupported", 4 => "Failed", _ => $"#{result}"
             };
-            BeginInvoke(() => _messageLog?.AddMessage($"CMD_ACK: {cmd} -> {resultText}"));
+            BeginInvoke(() => _messageLog?.AddMessage($"ACK {cmd}: {resultText}"));
         };
 
         _processor.ParameterReceived += (name, value) =>
@@ -71,25 +75,24 @@ public partial class MainForm : Form
 
         SetupPanels();
         SetupNavigation();
+        SetupWindowControls();
         WireEvents();
 
-        // Start on Overview
         SwitchTab(navOverview, _overviewPanel!);
     }
 
     private void SetupPanels()
     {
         _overviewPanel = new OverviewPanel();
-        _hudPanel = new HudPanel();
+        _hudPanel = new NeonHud();
 
-        // Wrap HUD + Overview in a split
+        // Split: HUD left, overview right
         var overviewSplit = new SplitContainer
         {
             Dock = DockStyle.Fill,
             Orientation = Orientation.Vertical,
-            SplitterDistance = 450,
-            BackColor = ModernTheme.Background,
-            FixedPanel = FixedPanel.Panel1
+            SplitterDistance = 420,
+            BackColor = ModernTheme.Background
         };
         overviewSplit.Panel1.BackColor = ModernTheme.Background;
         overviewSplit.Panel2.BackColor = ModernTheme.Background;
@@ -117,13 +120,49 @@ public partial class MainForm : Form
         navLogs.Click += (s, e) => OpenLogFile();
     }
 
+    private void SetupWindowControls()
+    {
+        // Borderless window drag
+        titleBar.MouseDown += (s, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _dragging = true;
+                _dragStart = e.Location;
+            }
+        };
+        titleBar.MouseMove += (s, e) =>
+        {
+            if (_dragging)
+            {
+                Location = new Point(Location.X + e.X - _dragStart.X, Location.Y + e.Y - _dragStart.Y);
+            }
+        };
+        titleBar.MouseUp += (s, e) => _dragging = false;
+        titleBar.MouseDoubleClick += (s, e) =>
+        {
+            WindowState = WindowState == FormWindowState.Maximized
+                ? FormWindowState.Normal : FormWindowState.Maximized;
+        };
+
+        // Window buttons
+        btnClose.Click += (s, e) => Close();
+        btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
+        btnMaximize.Click += (s, e) =>
+        {
+            WindowState = WindowState == FormWindowState.Maximized
+                ? FormWindowState.Normal : FormWindowState.Maximized;
+        };
+
+        btnClose.BackColor = ModernTheme.Danger;
+        btnClose.ForeColor = Color.White;
+    }
+
     private void SwitchTab(Panels.ModernButton nav, Control content)
     {
-        // Deactivate old nav
-        if (_activeNav != null) _activeNav.BaseColor = ModernTheme.SurfaceLight;
+        if (_activeNav != null) _activeNav.BaseColor = ModernTheme.TextMuted;
         if (_activeContent != null) _activeContent.Visible = false;
 
-        // Activate new nav
         nav.BaseColor = ModernTheme.Accent;
         content.Dock = DockStyle.Fill;
         contentPanel.Controls.Clear();
@@ -136,10 +175,8 @@ public partial class MainForm : Form
 
     private void WireEvents()
     {
-        if (_btnConnect != null)
-            _btnConnect.Click += (s, e) => ConnectSerialToolStripMenuItem_Click(s!, e);
-        if (_btnDisconnect != null)
-            _btnDisconnect.Click += (s, e) => DisconnectToolStripMenuItem_Click(s!, e);
+        btnConnect.Click += (s, e) => ConnectSerialToolStripMenuItem_Click(s!, e);
+        btnDisconnect.Click += (s, e) => DisconnectToolStripMenuItem_Click(s!, e);
 
         btnArm.Click += (s, e) => SendCommand(MavlinkDefinitions.MAV_CMD_COMPONENT_ARM_DISARM, 1.0f);
         btnDisarm.Click += (s, e) => SendCommand(MavlinkDefinitions.MAV_CMD_COMPONENT_ARM_DISARM, 0.0f);
@@ -147,11 +184,11 @@ public partial class MainForm : Form
         btnRTL.Click += (s, e) => SendCommand(MavlinkDefinitions.MAV_CMD_NAV_RETURN_TO_LAUNCH);
         btnEmergencyStop.Click += (s, e) =>
         {
-            if (MessageBox.Show("EMERGENCY MOTOR STOP?\nThis will immediately disarm the vehicle!",
-                "Emergency Stop", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            if (MessageBox.Show("EMERGENCY MOTOR STOP?", "Emergency",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 SendCommand(MavlinkDefinitions.MAV_CMD_COMPONENT_ARM_DISARM, 0, 21196);
-                _messageLog?.AddMessage("EMERGENCY MOTOR STOP sent!", 2);
+                _messageLog?.AddMessage("EMERGENCY STOP!", 2);
             }
         };
 
@@ -161,12 +198,11 @@ public partial class MainForm : Form
             {
                 var mode = MavlinkDefinitions.FlightModes.FirstOrDefault(x => x.Value == modeName);
                 SetMode(mode.Key);
-                _messageLog?.AddMessage($"Mode change: {modeName}");
+                _messageLog?.AddMessage($"Mode: {modeName}");
             }
         };
 
         lblConnection.Click += (s, e) => ConnectSerialToolStripMenuItem_Click(s!, e);
-        lblConnection.Cursor = Cursors.Hand;
     }
 
     // === Connection ===
@@ -185,7 +221,7 @@ public partial class MainForm : Form
                 _settings.LastBaudRate = dlg.SelectedBaud;
                 _settings.Save();
                 _heartbeatTimer.Start();
-                _messageLog?.AddMessage($"Connected to {dlg.SelectedPort} @ {dlg.SelectedBaud}");
+                _messageLog?.AddMessage($"Connected {dlg.SelectedPort} @ {dlg.SelectedBaud}");
             }
             catch (Exception ex)
             {
@@ -205,11 +241,7 @@ public partial class MainForm : Form
                 _stream.OpenUdp(dlg.SelectedHost, dlg.SelectedPort);
                 lblConnection.Text = $"UDP: {dlg.SelectedHost}:{dlg.SelectedPort}";
                 lblConnection.ForeColor = ModernTheme.Success;
-                _settings.LastUdpHost = dlg.SelectedHost;
-                _settings.LastUdpPort = dlg.SelectedPort;
-                _settings.Save();
                 _heartbeatTimer.Start();
-                _messageLog?.AddMessage($"Connected UDP {dlg.SelectedHost}:{dlg.SelectedPort}");
             }
             catch (Exception ex)
             {
@@ -230,7 +262,6 @@ public partial class MainForm : Form
                 lblConnection.Text = $"TCP: {dlg.SelectedHost}:{dlg.SelectedPort}";
                 lblConnection.ForeColor = ModernTheme.Success;
                 _heartbeatTimer.Start();
-                _messageLog?.AddMessage($"Connected TCP {dlg.SelectedHost}:{dlg.SelectedPort}");
             }
             catch (Exception ex)
             {
@@ -244,17 +275,15 @@ public partial class MainForm : Form
     {
         if (_stream.IsOpen)
         {
-            MessageBox.Show("Disconnect first before starting simulator.", "Info",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Disconnect first.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
         _sim = new VirtualVehicle("plane");
         _stream.OpenSimulation(_sim);
-        lblConnection.Text = "SIMULATED (Plane)";
+        lblConnection.Text = "SIM (Plane)";
         lblConnection.ForeColor = ModernTheme.Warning;
-        _messageLog?.AddMessage("Simulator started: Fixed-wing plane", 6);
-        _messageLog?.AddMessage("Flying circular pattern over London", 14);
+        _messageLog?.AddMessage("Simulator started", 6);
     }
 
     private void StopSimulatorToolStripMenuItem_Click(object? sender = null, EventArgs? e = null)
@@ -266,7 +295,6 @@ public partial class MainForm : Form
             _vehicleState.IsConnected = false;
             lblConnection.Text = "Disconnected";
             lblConnection.ForeColor = ModernTheme.TextMuted;
-            _messageLog?.AddMessage("Simulator stopped", 14);
         }
     }
 
@@ -278,7 +306,6 @@ public partial class MainForm : Form
         lblConnection.Text = "Disconnected";
         lblConnection.ForeColor = ModernTheme.TextMuted;
         _heartbeatTimer.Stop();
-        _messageLog?.AddMessage("Disconnected", 14);
     }
 
     private void OpenLogFile()
@@ -296,71 +323,51 @@ public partial class MainForm : Form
 
     private void TakeoffToolStripMenuItem_Click(object? sender = null, EventArgs? e = null)
     {
-        using var input = new InputBox("Enter takeoff altitude (meters):", "50");
+        using var input = new InputBox("Takeoff altitude (m):", "50");
         if (input.ShowDialog(this) == DialogResult.OK && float.TryParse(input.Value, out float alt))
         {
-            SetMode(4); // Guided
+            SetMode(4);
             SendCommand(MavlinkDefinitions.MAV_CMD_NAV_TAKEOFF, alt);
-            _messageLog?.AddMessage($"Takeoff to {alt}m (Guided mode)");
+            _messageLog?.AddMessage($"Takeoff {alt}m");
         }
     }
 
     private void SendCommand(ushort command, float param1 = 0, float param2 = 0)
     {
         if (!_stream.IsOpen) return;
-
         var payload = new byte[32];
         BitConverter.GetBytes(command).CopyTo(payload, 0);
         BitConverter.GetBytes(param1).CopyTo(payload, 4);
         BitConverter.GetBytes(param2).CopyTo(payload, 8);
-
-        var packet = MavlinkCodec.Encode(
-            _vehicleState.SystemId, 0, MavlinkDefinitions.COMMAND_LONG, payload);
-        _stream.Send(packet);
+        _stream.Send(MavlinkCodec.Encode(_vehicleState.SystemId, 0, MavlinkDefinitions.COMMAND_LONG, payload));
     }
 
     private void SetMode(int mode)
     {
         if (!_stream.IsOpen) return;
-
         var payload = new byte[8];
         payload[0] = _vehicleState.SystemId;
-        payload[1] = 0;
         BitConverter.GetBytes((uint)mode).CopyTo(payload, 4);
-
-        var packet = MavlinkCodec.Encode(
-            _vehicleState.SystemId, 0, MavlinkDefinitions.SET_MODE, payload);
-        _stream.Send(packet);
+        _stream.Send(MavlinkCodec.Encode(_vehicleState.SystemId, 0, MavlinkDefinitions.SET_MODE, payload));
     }
 
     private void SendParamRequestList()
     {
         if (!_stream.IsOpen) return;
-
         var payload = new byte[2];
         payload[0] = _vehicleState.SystemId;
-        payload[1] = 0;
-
-        var packet = MavlinkCodec.Encode(
-            _vehicleState.SystemId, 0, MavlinkDefinitions.PARAM_REQUEST_LIST, payload);
-        _stream.Send(packet);
-        _messageLog?.AddMessage("Requested parameter list");
+        _stream.Send(MavlinkCodec.Encode(_vehicleState.SystemId, 0, MavlinkDefinitions.PARAM_REQUEST_LIST, payload));
     }
 
     private void SendParamSet(string name, float value)
     {
         if (!_stream.IsOpen) return;
-
         var payload = new byte[23];
         var nameBytes = System.Text.Encoding.ASCII.GetBytes(name);
         Array.Copy(nameBytes, 0, payload, 0, Math.Min(nameBytes.Length, 16));
         BitConverter.GetBytes(value).CopyTo(payload, 16);
         BitConverter.GetBytes((ushort)9).CopyTo(payload, 20);
-
-        var packet = MavlinkCodec.Encode(
-            _vehicleState.SystemId, 0, MavlinkDefinitions.PARAM_SET, payload);
-        _stream.Send(packet);
-        _messageLog?.AddMessage($"Set parameter: {name} = {value}");
+        _stream.Send(MavlinkCodec.Encode(_vehicleState.SystemId, 0, MavlinkDefinitions.PARAM_SET, payload));
     }
 
     // === Timers ===
@@ -371,7 +378,7 @@ public partial class MainForm : Form
             (DateTime.UtcNow - _vehicleState.LastHeartbeat).TotalSeconds > 5)
         {
             _vehicleState.IsConnected = false;
-            lblConnection.Text = "Connection Lost";
+            lblConnection.Text = "Lost";
             lblConnection.ForeColor = ModernTheme.Danger;
         }
     }
@@ -379,34 +386,30 @@ public partial class MainForm : Form
     private void HeartbeatTimer_Tick(object? sender, EventArgs e)
     {
         if (!_stream.IsOpen) return;
-
         var payload = new byte[9];
-        payload[0] = 0;
         BitConverter.GetBytes(0u).CopyTo(payload, 1);
         payload[5] = 6;
         payload[6] = MavlinkDefinitions.MAV_AUTOPILOT_GENERIC;
-
-        var packet = MavlinkCodec.Encode(
-            _vehicleState.SystemId, 0, MavlinkDefinitions.HEARTBEAT, payload);
-        _stream.Send(packet);
+        _stream.Send(MavlinkCodec.Encode(_vehicleState.SystemId, 0, MavlinkDefinitions.HEARTBEAT, payload));
     }
 
     private void UpdateStatusBar()
     {
-        if (_vehicleState.IsConnected)
-        {
-            lblMode.Text = $"Mode: {_vehicleState.FlightModeName}";
-            lblMode.ForeColor = _vehicleState.IsArmed ? ModernTheme.Success : ModernTheme.TextSecondary;
-            lblArmed.Text = _vehicleState.IsArmed ? "ARMED" : "Disarmed";
-            lblArmed.ForeColor = _vehicleState.IsArmed ? ModernTheme.Armed : ModernTheme.Disarmed;
-            lblAlt.Text = $"Alt: {_vehicleState.AltitudeRel:F1}m";
-            lblSpeed.Text = $"GS: {_vehicleState.GroundSpeed:F1}m/s";
-            lblBatt.Text = $"Batt: {_vehicleState.BatteryVoltage:F1}V";
+        if (!_vehicleState.IsConnected) return;
 
-            _hudPanel?.UpdateFromState(_vehicleState);
-            _overviewPanel?.UpdateFromState(_vehicleState);
-            _sensorsPanel?.UpdateFromState(_vehicleState);
-        }
+        lblStatusMode.Text = $"Mode: {_vehicleState.FlightModeName}";
+        lblStatusMode.ForeColor = ModernTheme.Accent;
+
+        lblStatusArmed.Text = _vehicleState.IsArmed ? "ARMED" : "Disarmed";
+        lblStatusArmed.ForeColor = _vehicleState.IsArmed ? ModernTheme.Armed : ModernTheme.Disarmed;
+
+        lblStatusAlt.Text = $"Alt: {_vehicleState.AltitudeRel:F1}m";
+        lblStatusSpeed.Text = $"GS: {_vehicleState.GroundSpeed:F1}m/s";
+        lblStatusBatt.Text = $"Batt: {_vehicleState.BatteryVoltage:F1}V";
+
+        _hudPanel?.UpdateFromState(_vehicleState);
+        _overviewPanel?.UpdateFromState(_vehicleState);
+        _sensorsPanel?.UpdateFromState(_vehicleState);
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -419,9 +422,6 @@ public partial class MainForm : Form
     }
 }
 
-/// <summary>
-/// Simple input dialog.
-/// </summary>
 public class InputBox : Form
 {
     public string Value => txtInput.Text;
@@ -429,29 +429,29 @@ public class InputBox : Form
 
     public InputBox(string prompt, string defaultValue = "")
     {
-        Text = "Input";
-        Size = new Size(350, 150);
         FormBorderStyle = FormBorderStyle.FixedDialog;
+        Size = new Size(320, 140);
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        BackColor = Utils.ModernTheme.Surface;
-        ForeColor = Utils.ModernTheme.TextPrimary;
+        BackColor = ModernTheme.Surface;
+        ForeColor = ModernTheme.TextPrimary;
 
-        Controls.Add(new Label { Text = prompt, Location = new Point(15, 15), AutoSize = true, ForeColor = Utils.ModernTheme.TextSecondary });
-        txtInput = new TextBox { Location = new Point(15, 45), Width = 300, Text = defaultValue, BackColor = Utils.ModernTheme.SurfaceLight, ForeColor = Utils.ModernTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle };
+        Controls.Add(new Label { Text = prompt, Location = new Point(15, 12), AutoSize = true, ForeColor = ModernTheme.TextSecondary });
+        txtInput = new TextBox { Location = new Point(15, 38), Width = 275, Text = defaultValue, BackColor = ModernTheme.SurfaceLight, ForeColor = ModernTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle };
         Controls.Add(txtInput);
 
         var btnOk = new Button
         {
             Text = "OK",
-            Location = new Point(120, 80),
-            Size = new Size(80, 30),
+            Location = new Point(110, 75),
+            Size = new Size(80, 28),
             DialogResult = DialogResult.OK,
-            BackColor = Utils.ModernTheme.Accent,
+            BackColor = ModernTheme.Accent,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat
         };
+        btnOk.FlatAppearance.BorderSize = 0;
         Controls.Add(btnOk);
         AcceptButton = btnOk;
     }
