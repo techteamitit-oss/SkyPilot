@@ -21,7 +21,7 @@ public class CompassWidget : Control
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         Size = new Size(120, 120);
-        BackColor = Color.Transparent;
+        BackColor = ModernTheme.Background;
     }
 
     protected override void OnPaint(PaintEventArgs e)
