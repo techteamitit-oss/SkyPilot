@@ -204,7 +204,7 @@ public class MapPanel : UserControl
 var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false });
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
 }).addTo(map);
 
 var vehicleIcon = L.divIcon({
@@ -275,11 +275,22 @@ function updateWpCount() {
   document.getElementById('wpcount').textContent = 'Waypoints: ' + waypointMarkers.length;
 }
 
+var lastVehicleUpdate = 0;
+var vehicleUpdatePending = null;
 function updateVehicle(lat, lon, heading) {
+  var now = Date.now();
+  if (now - lastVehicleUpdate < 200) {
+    if (vehicleUpdatePending) clearTimeout(vehicleUpdatePending);
+    vehicleUpdatePending = setTimeout(function() { doVehicleUpdate(lat, lon, heading); }, 200);
+    return;
+  }
+  lastVehicleUpdate = now;
+  doVehicleUpdate(lat, lon, heading);
+}
+function doVehicleUpdate(lat, lon, heading) {
   vehicleMarker.setLatLng([lat, lon]);
   var el = vehicleMarker.getElement();
   if (el) { var svg = el.querySelector('svg'); if (svg) svg.style.transform = 'rotate(' + heading + 'deg)'; }
-  map.panTo([lat, lon], {animate: true, duration: 0.3});
 }
 
 function updateTrack(points) { trackLine.setLatLngs(points); }
