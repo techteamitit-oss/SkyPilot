@@ -147,16 +147,6 @@ public partial class MainForm : Form
                 _mapPanel.SyncWaypoints(coords);
             }
         };
-        _mapPanel.SimStartPosReceived += (lat, lon) =>
-        {
-            _simStartLat = lat;
-            _simStartLon = lon;
-        };
-        _mapPanel.SimTargetPosReceived += (lat, lon) =>
-        {
-            _simTargetLat = lat;
-            _simTargetLon = lon;
-        };
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
     }
@@ -349,9 +339,16 @@ public partial class MainForm : Form
             return;
         }
 
+        // Use waypoints from map: WP1 = start, WP2 = target (for point2point/distance)
+        var mapWps = _mapPanel?.GetWaypoints() ?? new();
+        double startLat = mapWps.Count > 0 ? mapWps[0].Lat : _simStartLat;
+        double startLon = mapWps.Count > 0 ? mapWps[0].Lon : _simStartLon;
+        double targetLat = mapWps.Count > 1 ? mapWps[1].Lat : _simTargetLat;
+        double targetLon = mapWps.Count > 1 ? mapWps[1].Lon : _simTargetLon;
+
         _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern,
-            startLat: _simStartLat, startLon: _simStartLon,
-            targetLat: _simTargetLat, targetLon: _simTargetLon);
+            startLat: startLat, startLon: startLon,
+            targetLat: targetLat, targetLon: targetLon);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapPanel!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
@@ -359,7 +356,7 @@ public partial class MainForm : Form
         _stream.OpenSimulation(_sim);
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
-        _messageLog?.AddMessage($"Simulator started at {_simStartLat:F4}, {_simStartLon:F4}", 6);
+        _messageLog?.AddMessage($"Sim started: WP1({startLat:F4},{startLon:F4}) → WP2({targetLat:F4},{targetLon:F4})", 6);
     }
 
     private void StopSimulatorToolStripMenuItem_Click(object? sender = null, EventArgs? e = null)
