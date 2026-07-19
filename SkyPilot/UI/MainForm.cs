@@ -117,6 +117,28 @@ public partial class MainForm : Form
         {
             _missionPanel?.UpdateWaypointFromMap(idx, lat, lon, alt, spd);
         };
+        _mapPanel.ExportKmlRequested += () =>
+        {
+            // Trigger KML export from mission panel
+            var waypoints = _missionPanel?.GetWaypoints();
+            if (waypoints == null || waypoints.Count == 0)
+            {
+                MessageBox.Show("No waypoints to export.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using var sfd = new SaveFileDialog { Filter = "KML files|*.kml|All files|*.*", FileName = "mission.kml" };
+            if (sfd.ShowDialog(this) != DialogResult.OK) return;
+            ExportKml(sfd.FileName, waypoints);
+        };
+        _mapPanel.SyncMissionRequested += () =>
+        {
+            var waypoints = _missionPanel?.GetWaypoints();
+            if (waypoints != null && waypoints.Count > 0)
+            {
+                var coords = waypoints.Select(w => (w.Lat, w.Lon)).ToList();
+                _mapPanel.SyncWaypoints(coords);
+            }
+        };
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
     }
@@ -431,6 +453,45 @@ public partial class MainForm : Form
         _sensorsPanel?.UpdateFromState(_vehicleState);
         if (_vehicleState.Latitude != 0 && _vehicleState.Longitude != 0)
             _mapPanel?.UpdatePosition(_vehicleState.Latitude, _vehicleState.Longitude, _vehicleState.Yaw);
+    }
+
+    private void ExportKml(string path, List<Waypoint> waypoints)
+    {
+        var coords = new List<string>();
+        var placemarks = new List<string>();
+
+        foreach (var wp in waypoints)
+        {
+            coords.Add($"{wp.Lon:F7},{wp.Lat:F7},{wp.Alt:F1}");
+            placemarks.Add($@"
+    <Placemark>
+      <name>WP{wp.Seq} - {wp.Command}</name>
+      <description>Altitude: {wp.Alt:F1}m | Speed: {wp.Param2:F1}m/s | {wp.Command}</description>
+      <Point>
+        <coordinates>{wp.Lon:F7},{wp.Lat:F7},{wp.Alt:F1}</coordinates>
+      </Point>
+    </Placemark>");
+        }
+
+        string kml = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
+<kml xmlns=""http://www.opengis.net/kml/2.2"">
+  <Document>
+    <name>SkyPilot Mission</name>
+    <Style id=""routeStyle""><LineStyle><color>ff00aaff</color><width>3</width></LineStyle></Style>
+    <Placemark>
+      <name>Mission Route</name>
+      <styleUrl>#routeStyle</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <altitudeMode>relativeToGround</altitudeMode>
+        <coordinates>{string.Join(" ", coords)}</coordinates>
+      </LineString>
+    </Placemark>
+    {string.Join("", placemarks)}
+  </Document>
+</kml>";
+        File.WriteAllText(path, kml);
+        MessageBox.Show($"KML exported: {waypoints.Count} waypoints\n{path}", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)

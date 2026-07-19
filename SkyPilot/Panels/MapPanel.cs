@@ -19,6 +19,12 @@ public class MapPanel : UserControl
     /// <summary>Fires when waypoint is updated (moved or settings changed). Args: index, lat, lon, alt, spd</summary>
     public event Action<int, double, double, double, double>? WaypointUpdated;
 
+    /// <summary>Fires when user clicks Export KML on map</summary>
+    public event Action? ExportKmlRequested;
+
+    /// <summary>Fires when user clicks Sync Mission on map</summary>
+    public event Action? SyncMissionRequested;
+
     /// <summary>Fires when user right-clicks to remove a waypoint. Args: waypointIndex</summary>
     public event Action<int>? WaypointRemoved;
 
@@ -191,6 +197,8 @@ public class MapPanel : UserControl
   <div id=""wpcount"">Waypoints: 0</div>
   <button onclick=""clearAllWaypoints()"">Clear All</button>
   <button class=""danger"" onclick=""toggleAddMode()"">+ Add Mode</button>
+  <button onclick=""exportKML()"">Export KML</button>
+  <button onclick=""syncFromMission()"">Sync Mission</button>
 </div>
 <script>
 var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false });
@@ -346,6 +354,15 @@ function sendWpUpdate(wp) {
 }
 
 function clearWaypoints() { clearAllWaypoints(); }
+function exportKML() {
+  if (waypointMarkers.length === 0) { alert('No waypoints to export'); return; }
+  window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'exportKML'}));
+}
+
+function syncFromMission() {
+  window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'syncMission'}));
+}
+
 function clearTrack() { trackLine.setLatLngs([]); }
 </script>
 </body>
