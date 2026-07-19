@@ -276,7 +276,7 @@ public class FPVPanel : UserControl
         DrawHeadingTape(g, cx, 10, w);
 
         // === ALTITUDE TAPE (right side) ===
-        DrawAltitudeTape(g, w - 60, cy, h);
+        DrawAltitudeTape(g, w - 80, cy, h);
 
         // === SPEED TAPE (left side) ===
         DrawSpeedTape(g, 10, cy, h);
@@ -338,70 +338,100 @@ public class FPVPanel : UserControl
 
     private void DrawAltitudeTape(Graphics g, int x, int cy, int h)
     {
-        int tapeW = 50, tapeH = Math.Min(200, h - 20);
+        int tapeW = 65, tapeH = Math.Min(240, h - 40);
         int tapeY = cy - tapeH / 2;
 
-        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        // Background
+        using var bgBrush = new SolidBrush(Color.FromArgb(160, 13, 17, 23));
         g.FillRectangle(bgBrush, x, tapeY, tapeW, tapeH);
-        using var borderPen = new Pen(Color.FromArgb(80, 0, 212, 255), 1);
+        using var borderPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
         g.DrawRectangle(borderPen, x, tapeY, tapeW, tapeH);
 
-        using var markFont = new Font("Cascadia Code", 7f);
-        using var markBrush = new SolidBrush(ModernTheme.TextMuted);
-        using var markPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
-        using var valFont = new Font("Cascadia Code", 10f, FontStyle.Bold);
-        using var valBrush = new SolidBrush(ModernTheme.Accent);
+        // Label
+        using var lblFont = new Font("Segoe UI", 7f, FontStyle.Bold);
+        using var lblBrush = new SolidBrush(ModernTheme.TextMuted);
+        g.DrawString("ALT m", lblFont, lblBrush, x + 4, tapeY - 14);
 
-        float pxPerM = tapeH / 100f; // 100m range
+        using var markFont = new Font("Cascadia Code", 8f);
+        using var markBrush = new SolidBrush(ModernTheme.TextMuted);
+        using var markPen = new Pen(Color.FromArgb(120, 0, 212, 255), 1);
+
+        float pxPerM = tapeH / 100f;
         for (int d = -50; d <= 50; d += 10)
         {
             float alt = _altitude + d;
             if (alt < 0) continue;
             int y = cy - (int)(d * pxPerM);
-            if (y < tapeY || y > tapeY + tapeH) continue;
-            g.DrawLine(markPen, x, y, x + 8, y);
-            g.DrawString(alt.ToString("F0"), markFont, markBrush, x + 10, y - 5);
+            if (y < tapeY + 5 || y > tapeY + tapeH - 5) continue;
+            g.DrawLine(markPen, x, y, x + 10, y);
+            g.DrawString(alt.ToString("F0"), markFont, markBrush, x + 12, y - 6);
         }
 
-        // Current value box
-        int boxY = cy - 10;
-        using var boxBrush = new SolidBrush(Color.FromArgb(200, 0, 212, 255));
-        g.FillRectangle(boxBrush, x, boxY, tapeW, 20);
-        g.DrawString($"{_altitude:F0}", valFont, new SolidBrush(Color.White), x + 4, boxY + 2);
+        // Current value box — bigger and brighter
+        int boxY = cy - 14;
+        using var boxBrush = new SolidBrush(Color.FromArgb(220, 0, 180, 255));
+        g.FillRectangle(boxBrush, x, boxY, tapeW, 28);
+        using var valFont = new Font("Cascadia Code", 14f, FontStyle.Bold);
+        g.DrawString($"{_altitude:F0}", valFont, new SolidBrush(Color.White), x + 6, boxY + 3);
+
+        // Arrow pointers
+        using var arrowBrush = new SolidBrush(ModernTheme.Accent);
+        g.FillPolygon(arrowBrush, new Point[] {
+            new(x, boxY), new(x - 6, boxY + 14), new(x, boxY + 28)
+        });
+        g.FillPolygon(arrowBrush, new Point[] {
+            new(x + tapeW, boxY), new(x + tapeW + 6, boxY + 14), new(x + tapeW, boxY + 28)
+        });
     }
 
     private void DrawSpeedTape(Graphics g, int x, int cy, int h)
     {
-        int tapeW = 50, tapeH = Math.Min(200, h - 20);
+        int tapeW = 65, tapeH = Math.Min(240, h - 40);
         int tapeY = cy - tapeH / 2;
 
-        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        // Background
+        using var bgBrush = new SolidBrush(Color.FromArgb(160, 13, 17, 23));
         g.FillRectangle(bgBrush, x, tapeY, tapeW, tapeH);
-        using var borderPen = new Pen(Color.FromArgb(80, 0, 212, 255), 1);
+        using var borderPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
         g.DrawRectangle(borderPen, x, tapeY, tapeW, tapeH);
 
-        using var markFont = new Font("Cascadia Code", 7f);
-        using var markBrush = new SolidBrush(ModernTheme.TextMuted);
-        using var markPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
-        using var valFont = new Font("Cascadia Code", 10f, FontStyle.Bold);
+        // Label
+        using var lblFont = new Font("Segoe UI", 7f, FontStyle.Bold);
+        using var lblBrush = new SolidBrush(ModernTheme.TextMuted);
+        g.DrawString("SPD m/s", lblFont, lblBrush, x + 4, tapeY - 14);
 
-        float pxPerMs = tapeH / 40f; // 40 m/s range
+        using var markFont = new Font("Cascadia Code", 8f);
+        using var markBrush = new SolidBrush(ModernTheme.TextMuted);
+        using var markPen = new Pen(Color.FromArgb(120, 0, 212, 255), 1);
+
+        float pxPerMs = tapeH / 40f;
         for (int d = -20; d <= 20; d += 5)
         {
             float spd = _speed + d;
             if (spd < 0) continue;
             int y = cy - (int)(d * pxPerMs);
-            if (y < tapeY || y > tapeY + tapeH) continue;
+            if (y < tapeY + 5 || y > tapeY + tapeH - 5) continue;
             int lineX = x + tapeW;
-            g.DrawLine(markPen, lineX - 8, y, lineX, y);
-            g.DrawString(spd.ToString("F0"), markFont, markBrush, x, y - 5);
+            g.DrawLine(markPen, lineX - 10, y, lineX, y);
+            g.DrawString(spd.ToString("F0"), markFont, markBrush, x + 2, y - 6);
         }
 
         // Current value box
-        int boxY = cy - 10;
-        using var boxBrush = new SolidBrush(Color.FromArgb(200, 0, 212, 255));
-        g.FillRectangle(boxBrush, x, boxY, tapeW, 20);
-        g.DrawString($"{_speed:F0}", valFont, new SolidBrush(Color.White), x + 4, boxY + 2);
+        int boxY = cy - 14;
+        Color spdColor = _speed > 30 ? ModernTheme.Warning : Color.FromArgb(220, 0, 200, 100);
+        using var boxBrush = new SolidBrush(spdColor);
+        g.FillRectangle(boxBrush, x, boxY, tapeW, 28);
+        using var valFont = new Font("Cascadia Code", 14f, FontStyle.Bold);
+        g.DrawString($"{_speed:F0}", valFont, new SolidBrush(Color.White), x + 6, boxY + 3);
+
+        // Arrow pointers
+        using var arrowBrush = new SolidBrush(spdColor);
+        g.FillPolygon(arrowBrush, new Point[] {
+            new(x, boxY), new(x - 6, boxY + 14), new(x, boxY + 28)
+        });
+        g.FillPolygon(arrowBrush, new Point[] {
+            new(x + tapeW, boxY), new(x + tapeW + 6, boxY + 14), new(x + tapeW, boxY + 28)
+        });
     }
 
     private void DrawBankIndicator(Graphics g, int cx, int y)
