@@ -222,6 +222,7 @@ public partial class MainForm : Form
         btnDisarm.Click += (s, e) => SendCommand(MavlinkDefinitions.MAV_CMD_COMPONENT_ARM_DISARM, 0.0f);
         btnTakeoff.Click += (s, e) => TakeoffToolStripMenuItem_Click(s!, e);
         btnRTL.Click += (s, e) => SendCommand(MavlinkDefinitions.MAV_CMD_NAV_RETURN_TO_LAUNCH);
+        btnExit.Click += (s, e) => Close();
         btnEmergencyStop.Click += (s, e) =>
         {
             if (MessageBox.Show("EMERGENCY MOTOR STOP?", "Emergency",

@@ -43,6 +43,7 @@ partial class MainForm
     private Panels.ModernButton btnTakeoff;
     private Panels.ModernButton btnRTL;
     private Panels.ModernButton btnEmergencyStop;
+    private Panels.ModernButton btnExit;
     private Panels.ModernButton btnConnect;
     private Panels.ModernButton btnDisconnect;
 
@@ -229,6 +230,15 @@ partial class MainForm
             "Loit", "RTL", "Circ", "Land", "Sport", "Pos", "Brake"
         });
         sidePanel.Controls.Add(cmbMode);
+
+        // Exit button at bottom
+        btnExit = new Panels.ModernButton("Exit", ModernTheme.TextMuted)
+        {
+            Location = new Point(8, 690),
+            Width = 144,
+            Height = 28
+        };
+        sidePanel.Controls.Add(btnExit);
 
         // === CONTENT PANEL ===
         contentPanel = new Panel
