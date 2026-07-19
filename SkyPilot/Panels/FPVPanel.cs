@@ -305,40 +305,67 @@ public class FPVPanel : UserControl
 
     private void DrawHeadingTape(Graphics g, int cx, int y, int w)
     {
-        int tapeW = 200;
-        int tapeH = 22;
+        int tapeW = Math.Min(320, w - 20);
+        int tapeH = 30;
         int tapeX = cx - tapeW / 2;
 
         // Background
-        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        using var bgBrush = new SolidBrush(Color.FromArgb(160, 13, 17, 23));
         g.FillRectangle(bgBrush, tapeX, y, tapeW, tapeH);
-        using var borderPen = new Pen(Color.FromArgb(80, 0, 212, 255), 1);
+        using var borderPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
         g.DrawRectangle(borderPen, tapeX, y, tapeW, tapeH);
 
-        // Draw heading marks
-        using var markFont = new Font("Cascadia Code", 7f);
+        using var markFont = new Font("Cascadia Code", 8f);
+        using var cardinalFont = new Font("Segoe UI", 9f, FontStyle.Bold);
         using var markBrush = new SolidBrush(ModernTheme.TextMuted);
-        using var markPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
+        using var markPen = new Pen(Color.FromArgb(120, 0, 212, 255), 1);
 
-        float pxPerDeg = tapeW / 60f; // show 60 degrees range
+        var cardinalDirs = new Dictionary<int, (string Label, Color Color)>
+        {
+            {0, ("N", Color.FromArgb(255, 255, 60, 60))},
+            {90, ("E", ModernTheme.Accent)},
+            {180, ("S", Color.FromArgb(255, 255, 255, 255))},
+            {270, ("W", ModernTheme.Accent)}
+        };
+
+        float pxPerDeg = tapeW / 60f;
         for (int d = -30; d <= 30; d += 5)
         {
             float hdg = (_heading + d + 360) % 360;
             int x = cx + (int)(d * pxPerDeg);
-            if (x < tapeX || x > tapeX + tapeW) continue;
-            g.DrawLine(markPen, x, y + tapeH - 6, x, y + tapeH);
-            if (d % 10 == 0)
+            if (x < tapeX + 5 || x > tapeX + tapeW - 5) continue;
+
+            bool isMajor = d % 10 == 0;
+            g.DrawLine(markPen, x, y + tapeH - (isMajor ? 10 : 5), x, y + tapeH);
+
+            int normHdg = (int)hdg % 360;
+            if (cardinalDirs.TryGetValue(normHdg, out var dir))
             {
-                string label = hdg.ToString("F0");
-                g.DrawString(label, markFont, markBrush, x - 8, y + 2);
+                var sz = g.MeasureString(dir.Label, cardinalFont);
+                g.DrawString(dir.Label, cardinalFont, new SolidBrush(dir.Color), x - sz.Width / 2, y + 2);
+            }
+            else if (isMajor)
+            {
+                g.DrawString(normHdg.ToString("F0"), markFont, markBrush, x - 8, y + 4);
             }
         }
 
-        // Center pointer
+        // Center pointer (larger triangle)
         using var ptrBrush = new SolidBrush(ModernTheme.Accent);
         g.FillPolygon(ptrBrush, new Point[] {
-            new(cx - 4, y + tapeH), new(cx + 4, y + tapeH), new(cx, y + tapeH + 6)
+            new(cx - 6, y + tapeH), new(cx + 6, y + tapeH), new(cx, y + tapeH + 8)
         });
+        // Top pointer
+        g.FillPolygon(ptrBrush, new Point[] {
+            new(cx - 4, y), new(cx + 4, y), new(cx, y - 6)
+        });
+
+        // Heading readout below tape
+        using var hdgFont = new Font("Cascadia Code", 10f, FontStyle.Bold);
+        using var hdgBrush = new SolidBrush(ModernTheme.Accent);
+        string hdgText = $"{_heading:F0}\u00B0";
+        var hdgSize = g.MeasureString(hdgText, hdgFont);
+        g.DrawString(hdgText, hdgFont, hdgBrush, cx - hdgSize.Width / 2, y + tapeH + 10);
     }
 
     private void DrawAltitudeTape(Graphics g, int x, int cy, int h)
