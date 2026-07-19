@@ -178,7 +178,13 @@ public partial class MainForm : Form
         cmbPattern.SelectedIndexChanged += (s, e) =>
         {
             if (cmbPattern.SelectedItem is string pattern)
-                _selectedPattern = pattern.ToLower().Replace(" ", "");
+                _selectedPattern = pattern switch
+                {
+                    "Point to Point" => "point2point",
+                    "Circle" => "circle",
+                    "Distance" => "distance",
+                    _ => pattern.ToLower().Replace(" ", "")
+                };
         };
         navMap.Click += (s, e) => SwitchTab(navMap, _mapPanel!);
     }
