@@ -35,6 +35,7 @@ partial class MainForm
     private Panels.ModernButton navLogs;
     private Panels.ModernButton navMap;
     private Panels.ModernButton navSim;
+    private ComboBox cmbVehicle;
 
     // Action buttons
     private Panels.ModernButton btnArm;
@@ -131,6 +132,24 @@ partial class MainForm
         sidePanel.Controls.Add(navMessages);
         sidePanel.Controls.Add(navParams);
         sidePanel.Controls.Add(navSim);
+
+        // Vehicle type selector
+        var vehicleLabel = new Label { Text = "VEHICLE", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 252), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(vehicleLabel);
+
+        cmbVehicle = new ComboBox
+        {
+            Location = new Point(8, 270),
+            Width = 144,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            BackColor = ModernTheme.SurfaceLight,
+            ForeColor = ModernTheme.TextPrimary,
+            Font = new Font("Segoe UI", 8.5f),
+            FlatStyle = FlatStyle.Standard
+        };
+        cmbVehicle.Items.AddRange(new object[] { "Plane", "Copter", "Rover" });
+        cmbVehicle.SelectedIndex = 0;
+        sidePanel.Controls.Add(cmbVehicle);
         sidePanel.Controls.Add(navMap);
         sidePanel.Controls.Add(navLogs);
 

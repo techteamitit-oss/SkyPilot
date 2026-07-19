@@ -31,6 +31,7 @@ public partial class MainForm : Form
     // Nav state
     private Panels.ModernButton? _activeNav;
     private Control? _activeContent;
+    private string _selectedVehicleType = "plane";
 
     // Borderless window dragging
     private bool _dragging;
@@ -121,6 +122,11 @@ public partial class MainForm : Form
         navParams.Click += (s, e) => SwitchTab(navParams, _paramPanel!);
         navLogs.Click += (s, e) => OpenLogFile();
         navSim.Click += (s, e) => StartSimulatorToolStripMenuItem_Click();
+        cmbVehicle.SelectedIndexChanged += (s, e) =>
+        {
+            if (cmbVehicle.SelectedItem is string type)
+                _selectedVehicleType = type.ToLower();
+        };
         navMap.Click += (s, e) => SwitchTab(navMap, _mapPanel!);
     }
 
@@ -283,7 +289,8 @@ public partial class MainForm : Form
             return;
         }
 
-        _sim = new VirtualVehicle("plane");
+        _sim = new VirtualVehicle(_selectedVehicleType);
+        SwitchTab(navMap, _mapPanel!);
         _stream.OpenSimulation(_sim);
         lblConnection.Text = "SIM (Plane)";
         lblConnection.ForeColor = ModernTheme.Warning;
