@@ -290,6 +290,9 @@ public class FPVPanel : UserControl
         // === THROTTLE BAR (bottom left) ===
         DrawThrottleBar(g, 10, h - 30, 80, 12);
 
+        // === COMPASS ROSE (bottom right) ===
+        DrawCompassRose(g, w - 70, h - 80);
+
         // === BORDER ===
         using var borderPen = new Pen(Color.FromArgb(60, 0, 212, 255), 1);
         g.DrawRectangle(borderPen, 0, 0, w - 1, h - 1);
@@ -443,5 +446,73 @@ public class FPVPanel : UserControl
         using var font = new Font("Cascadia Code", 7f);
         using var brush = new SolidBrush(ModernTheme.TextPrimary);
         g.DrawString($"THR {fill * 100:F0}%", font, brush, x + 2, y - 12);
+    }
+
+    private void DrawCompassRose(Graphics g, int cx, int cy)
+    {
+        int radius = 50;
+
+        // Semi-transparent background circle
+        using var bgBrush = new SolidBrush(Color.FromArgb(100, 13, 17, 23));
+        g.FillEllipse(bgBrush, cx - radius - 5, cy - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+        using var ringPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
+        g.DrawEllipse(ringPen, cx - radius - 5, cy - radius - 5, (radius + 5) * 2, (radius + 5) * 2);
+
+        g.TranslateTransform(cx, cy);
+        g.RotateTransform(-_heading);
+
+        using var tickPen = new Pen(Color.FromArgb(120, 255, 255, 255), 1);
+        using var majorPen = new Pen(Color.FromArgb(200, 255, 255, 255), 2);
+        using var dirFont = new Font("Segoe UI", 9f, FontStyle.Bold);
+        using var degFont = new Font("Cascadia Code", 6f);
+
+        // Cardinal + intercardinal + degree marks
+        var directions = new Dictionary<int, string> { {0,"N"}, {45,"NE"}, {90,"E"}, {135,"SE"}, {180,"S"}, {225,"SW"}, {270,"W"}, {315,"NW"} };
+
+        for (int deg = 0; deg < 360; deg += 5)
+        {
+            double rad = (deg - 90) * Math.PI / 180.0;
+            bool isMajor = deg % 30 == 0;
+            bool isCardinal = deg % 90 == 0;
+            bool isIntercardinal = deg % 45 == 0 && !isCardinal;
+
+            int innerR = isCardinal ? radius - 14 : isIntercardinal ? radius - 10 : isMajor ? radius - 8 : radius - 4;
+            int x1 = (int)(Math.Cos(rad) * innerR);
+            int y1 = (int)(Math.Sin(rad) * innerR);
+            int x2 = (int)(Math.Cos(rad) * radius);
+            int y2 = (int)(Math.Sin(rad) * radius);
+
+            g.DrawLine(isCardinal ? majorPen : tickPen, x1, y1, x2, y2);
+
+            // Labels for cardinal directions
+            if (directions.TryGetValue(deg, out var label))
+            {
+                int labelR = radius - 24;
+                int lx = (int)(Math.Cos(rad) * labelR) - 6;
+                int ly = (int)(Math.Sin(rad) * labelR) - 6;
+                Color dirColor = deg == 0 ? Color.FromArgb(255, 255, 60, 60) : // N = red
+                                 deg == 180 ? Color.FromArgb(255, 255, 255, 255) : // S = white
+                                 ModernTheme.Accent;
+                using var dirBrush = new SolidBrush(dirColor);
+                g.DrawString(label, dirFont, dirBrush, lx, ly);
+            }
+        }
+
+        g.ResetTransform();
+
+        // Fixed lubber line (triangle at top)
+        using var lubberBrush = new SolidBrush(ModernTheme.Accent);
+        g.FillPolygon(lubberBrush, new Point[] {
+            new(cx - 4, cy - radius - 8),
+            new(cx + 4, cy - radius - 8),
+            new(cx, cy - radius + 2)
+        });
+
+        // Heading readout
+        using var hdgFont = new Font("Cascadia Code", 8f, FontStyle.Bold);
+        using var hdgBrush = new SolidBrush(ModernTheme.Accent);
+        string hdgText = $"{_heading:F0}\u00B0";
+        var hdgSize = g.MeasureString(hdgText, hdgFont);
+        g.DrawString(hdgText, hdgFont, hdgBrush, cx - hdgSize.Width / 2, cy + radius + 4);
     }
 }
