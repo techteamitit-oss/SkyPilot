@@ -32,6 +32,9 @@ public class MapPanel : UserControl
     /// <summary>Fires when simulator requests start position from map. Args: lat, lon</summary>
     public event Action<double, double>? SimStartPosReceived;
 
+    /// <summary>Fires when user sets simulator target position from map. Args: lat, lon</summary>
+    public event Action<double, double>? SimTargetPosReceived;
+
     public MapPanel()
     {
         Dock = DockStyle.Fill;
@@ -102,6 +105,12 @@ public class MapPanel : UserControl
                 var lat = double.Parse(msg.Split("\"lat\":")[1].Split(",")[0]);
                 var lon = double.Parse(msg.Split("\"lon\":")[1].Split("}")[0]);
                 SimStartPosReceived?.Invoke(lat, lon);
+            }
+            else if (msg.Contains("setSimTarget"))
+            {
+                var lat = double.Parse(msg.Split("\"lat\":")[1].Split(",")[0]);
+                var lon = double.Parse(msg.Split("\"lon\":")[1].Split("}")[0]);
+                SimTargetPosReceived?.Invoke(lat, lon);
             }
         }
         catch { }
@@ -233,6 +242,7 @@ public class MapPanel : UserControl
   <button onclick=""clearAllWaypoints()"">Clear All</button>
   <button class=""danger"" onclick=""toggleAddMode()"">- Stop Adding</button>
   <button onclick=""toggleSetStartMode()"">Set Start</button>
+  <button onclick=""toggleSetTargetMode()"">Set Target</button>
   <button onclick=""exportKML()"">Export KML</button>
   <button onclick=""syncFromMission()"">Sync Mission</button>
 </div>
@@ -261,6 +271,7 @@ var waypointMarkers = [];
 var homeMarker = null;
 var addMode = true;
 var setStartMode = false;
+var setTargetMode = false;
 var waypointIndex = 0;
 var firstPosition = true;
 
@@ -270,11 +281,17 @@ document.getElementById('toolbar').addEventListener('click', function(e) { e.sto
 // Click to add waypoint
 map.on('click', function(e) {
   if (setStartMode) {
-    // Set simulator start position
     setStartMode = false;
     var btn = document.querySelector('#toolbar button[onclick=""toggleSetStartMode()""]');
     if (btn) { btn.textContent = 'Set Start'; btn.style.background = ''; btn.style.color = ''; }
     window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'setSimStart', lat:e.latlng.lat, lon:e.latlng.lng}));
+    return;
+  }
+  if (setTargetMode) {
+    setTargetMode = false;
+    var btn = document.querySelector('#toolbar button[onclick=""toggleSetTargetMode()""]');
+    if (btn) { btn.textContent = 'Set Target'; btn.style.background = ''; btn.style.color = ''; }
+    window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'setSimTarget', lat:e.latlng.lat, lon:e.latlng.lng}));
     return;
   }
   if (!addMode) return;
@@ -332,18 +349,40 @@ function toggleAddMode() {
 
 function toggleSetStartMode() {
   setStartMode = !setStartMode;
-  var btn = document.querySelector('#toolbar button[onclick=""toggleSetStartMode()""]');
-  if (btn) {
+  setTargetMode = false;
+  var startBtn = document.querySelector('#toolbar button[onclick=""toggleSetStartMode()""]');
+  var targetBtn = document.querySelector('#toolbar button[onclick=""toggleSetTargetMode()""]');
+  if (startBtn) {
     if (setStartMode) {
-      btn.textContent = 'Click Map...';
-      btn.style.background = 'rgba(0,200,80,0.4)';
-      btn.style.color = '#00C850';
+      startBtn.textContent = 'Click Map...';
+      startBtn.style.background = 'rgba(0,200,80,0.4)';
+      startBtn.style.color = '#00C850';
     } else {
-      btn.textContent = 'Set Start';
-      btn.style.background = '';
-      btn.style.color = '';
+      startBtn.textContent = 'Set Start';
+      startBtn.style.background = '';
+      startBtn.style.color = '';
     }
   }
+  if (targetBtn) { targetBtn.textContent = 'Set Target'; targetBtn.style.background = ''; targetBtn.style.color = ''; }
+}
+
+function toggleSetTargetMode() {
+  setTargetMode = !setTargetMode;
+  setStartMode = false;
+  var startBtn = document.querySelector('#toolbar button[onclick=""toggleSetStartMode()""]');
+  var targetBtn = document.querySelector('#toolbar button[onclick=""toggleSetTargetMode()""]');
+  if (targetBtn) {
+    if (setTargetMode) {
+      targetBtn.textContent = 'Click Map...';
+      targetBtn.style.background = 'rgba(255,51,102,0.4)';
+      targetBtn.style.color = '#FF3366';
+    } else {
+      targetBtn.textContent = 'Set Target';
+      targetBtn.style.background = '';
+      targetBtn.style.color = '';
+    }
+  }
+  if (startBtn) { startBtn.textContent = 'Set Start'; startBtn.style.background = ''; startBtn.style.color = ''; }
 }
 
 function updateRoute() {

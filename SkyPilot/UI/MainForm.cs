@@ -37,6 +37,8 @@ public partial class MainForm : Form
     private string _selectedPattern = "circle";
     private double _simStartLat = 51.5074;
     private double _simStartLon = -0.1278;
+    private double _simTargetLat = 51.51;
+    private double _simTargetLon = -0.13;
 
     // Borderless window dragging
     private bool _dragging;
@@ -149,6 +151,11 @@ public partial class MainForm : Form
         {
             _simStartLat = lat;
             _simStartLon = lon;
+        };
+        _mapPanel.SimTargetPosReceived += (lat, lon) =>
+        {
+            _simTargetLat = lat;
+            _simTargetLon = lon;
         };
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
@@ -337,7 +344,8 @@ public partial class MainForm : Form
         }
 
         _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern,
-            startLat: _simStartLat, startLon: _simStartLon);
+            startLat: _simStartLat, startLon: _simStartLon,
+            targetLat: _simTargetLat, targetLon: _simTargetLon);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapPanel!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
