@@ -457,6 +457,29 @@ public class VirtualVehicle : IDisposable
         _manualRoll = roll;
     }
 
+    public void UpdateTarget(double lat, double lon)
+    {
+        _targetLat = lat;
+        _targetLon = lon;
+        // Rebuild route终点
+        if (_routePoints.Count > 0)
+        {
+            _routePoints[_routePoints.Count - 1] = (lat, lon);
+        }
+    }
+
+    public void UpdateStart(double lat, double lon)
+    {
+        _startLat = lat;
+        _startLon = lon;
+        if (_routePoints.Count > 0)
+        {
+            _routePoints[0] = (lat, lon);
+        }
+        _lat = lat;
+        _lon = lon;
+    }
+
     public void SendStatustext(string text)
     {
         var p = new byte[50];

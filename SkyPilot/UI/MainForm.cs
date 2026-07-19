@@ -197,13 +197,15 @@ public partial class MainForm : Form
         {
             _simStartLat = lat;
             _simStartLon = lon;
-            _messageLog?.AddMessage($"Start set: ({lat:F6},{lon:F6})", 6);
+            _sim?.UpdateStart(lat, lon);
+            _messageLog?.AddMessage($"Start moved: ({lat:F6},{lon:F6})", 6);
         };
         _mapPanel.SimTargetPosReceived += (lat, lon) =>
         {
             _simTargetLat = lat;
             _simTargetLon = lon;
-            _messageLog?.AddMessage($"Target set: ({lat:F6},{lon:F6})", 6);
+            _sim?.UpdateTarget(lat, lon);
+            _messageLog?.AddMessage($"Target moved: ({lat:F6},{lon:F6})", 6);
         };
         _mapPanel.FPVToggleRequested += () =>
         {
