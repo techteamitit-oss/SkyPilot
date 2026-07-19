@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SkyPilot - UI Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #1e1e1e; color: #fff; }
+  .menubar { background: #2d2d2d; padding: 4px 10px; border-bottom: 1px solid #444; font-size: 13px; }
+  .menubar span { padding: 4px 10px; cursor: pointer; }
+  .menubar span:hover { background: #3d3d3d; border-radius: 3px; }
+  .statusbar { background: #2d2d2d; padding: 4px 15px; border-top: 1px solid #444; font-size: 12px; display: flex; gap: 20px; position: fixed; bottom: 0; width: 100%; }
+  .statusbar .green { color: #4caf50; }
+  .statusbar .dim { color: #888; }
+  .tabs { display: flex; background: #252526; border-bottom: 1px solid #444; }
+  .tab { padding: 8px 20px; cursor: pointer; border-bottom: 2px solid transparent; font-size: 13px; }
+  .tab:hover { background: #2a2d2e; }
+  .tab.active { border-bottom-color: #0078d4; background: #1e1e1e; }
+  .content { padding: 20px; height: calc(100vh - 75px); overflow: auto; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+  .card { background: #2d2d2d; border-radius: 6px; padding: 15px; text-align: center; }
+  .card .label { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 8px; }
+  .card .value { font-size: 24px; font-weight: bold; }
+  .card .value.green { color: #4caf50; }
+  .card .value.orange { color: #ff9800; }
+  .card .value.red { color: #f44336; }
+  .card .value.blue { color: #2196f3; }
+  .chart { background: #2d2d2d; border-radius: 6px; padding: 15px; margin-bottom: 15px; }
+  .chart h3 { font-size: 14px; color: #ccc; margin-bottom: 10px; }
+  canvas { width: 100%; height: 200px; }
+  .progress-row { display: flex; align-items: center; gap: 15px; margin: 8px 0; }
+  .progress-row label { width: 100px; font-size: 13px; color: #aaa; }
+  .progress-bar { flex: 1; height: 20px; background: #444; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .progress-fill.green { background: #4caf50; }
+  .progress-fill.orange { background: #ff9800; }
+  .progress-fill.red { background: #f44336; }
+  .progress-fill.blue { background: #2196f3; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #333; padding: 8px 12px; text-align: left; color: #aaa; }
+  td { padding: 6px 12px; border-bottom: 1px solid #333; }
+  .yes { color: #4caf50; }
+  .no { color: #f44336; }
+</style>
+</head>
+<body>
+
+<div class="menubar">
+  <span>File</span> <span>Flight</span> <span>Config</span> <span>Help</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active">Overview</div>
+  <div class="tab">Sensors</div>
+  <div class="tab">Mission</div>
+  <div class="tab">Log Analysis</div>
+</div>
+
+<div class="content">
+  <!-- Overview Cards -->
+  <div class="cards">
+    <div class="card">
+      <div class="label">Battery</div>
+      <div class="value green">12.4V</div>
+    </div>
+    <div class="card">
+      <div class="label">GPS</div>
+      <div class="value green">Fix 3 | 12 sats</div>
+    </div>
+    <div class="card">
+      <div class="label">Vibration</div>
+      <div class="value orange">42</div>
+    </div>
+    <div class="card">
+      <div class="label">EKF</div>
+      <div class="value green">0.15</div>
+    </div>
+    <div class="card">
+      <div class="label">Mode</div>
+      <div class="value blue">Stabilize</div>
+    </div>
+    <div class="card">
+      <div class="label">Altitude</div>
+      <div class="value">45.2m</div>
+    </div>
+    <div class="card">
+      <div class="label">Speed</div>
+      <div class="value">8.3 m/s</div>
+    </div>
+    <div class="card">
+      <div class="label">Position</div>
+      <div class="value" style="font-size:14px">33.8952°<br>35.5074°</div>
+    </div>
+  </div>
+
+  <!-- Accelerometer Chart -->
+  <div class="chart">
+    <h3>Accelerometer (m/s²)</h3>
+    <canvas id="accelChart"></canvas>
+  </div>
+
+  <!-- Gyroscope Chart -->
+  <div class="chart">
+    <h3>Gyroscope (deg/s)</h3>
+    <canvas id="gyroChart"></canvas>
+  </div>
+
+  <!-- Vibration -->
+  <div class="chart">
+    <h3>Vibration</h3>
+    <div class="progress-row">
+      <label style="color:#f44336">X</label>
+      <div class="progress-bar"><div class="progress-fill orange" style="width:47%"></div></div>
+      <span style="width:40px;text-align:right">42</span>
+    </div>
+    <div class="progress-row">
+      <label style="color:#4caf50">Y</label>
+      <div class="progress-bar"><div class="progress-fill green" style="width:28%"></div></div>
+      <span style="width:40px;text-align:right">25</span>
+    </div>
+    <div class="progress-row">
+      <label style="color:#2196f3">Z</label>
+      <div class="progress-bar"><div class="progress-fill blue" style="width:18%"></div></div>
+      <span style="width:40px;text-align:right">16</span>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:#888">
+      Clipping — Primary: 0 | Secondary: 0 | Tertiary: 0
+    </div>
+  </div>
+
+  <!-- EKF Status -->
+  <div class="chart">
+    <h3>EKF Status</h3>
+    <div class="progress-row">
+      <label>Velocity</label>
+      <div class="progress-bar"><div class="progress-fill green" style="width:10%"></div></div>
+      <span style="width:40px;text-align:right">0.10</span>
+    </div>
+    <div class="progress-row">
+      <label>Pos Horiz</label>
+      <div class="progress-bar"><div class="progress-fill green" style="width:15%"></div></div>
+      <span style="width:40px;text-align:right">0.15</span>
+    </div>
+    <div class="progress-row">
+      <label>Pos Vert</label>
+      <div class="progress-bar"><div class="progress-fill green" style="width:8%"></div></div>
+      <span style="width:40px;text-align:right">0.08</span>
+    </div>
+    <div class="progress-row">
+      <label>Compass</label>
+      <div class="progress-bar"><div class="progress-fill green" style="width:12%"></div></div>
+      <span style="width:40px;text-align:right">0.12</span>
+    </div>
+    <div class="progress-row">
+      <label>Terrain</label>
+      <div class="progress-bar"><div class="progress-fill green" style="width:5%"></div></div>
+      <span style="width:40px;text-align:right">0.05</span>
+    </div>
+  </div>
+
+  <!-- Sensor Health -->
+  <div class="chart">
+    <h3>Sensor Health</h3>
+    <table>
+      <tr><th>Sensor</th><th>Enabled</th><th>Present</th><th>Health</th></tr>
+      <tr><td>Gyro</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">OK</td></tr>
+      <tr><td>Accelerometer</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">OK</td></tr>
+      <tr><td>Magnetometer</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">OK</td></tr>
+      <tr><td>Barometer</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">OK</td></tr>
+      <tr><td>GPS</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">OK</td></tr>
+      <tr><td>Optical Flow</td><td class="no">No</td><td class="no">No</td><td class="no">Bad</td></tr>
+      <tr><td>RC Receiver</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">OK</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span class="green">● Connected: COM3</span>
+  <span class="dim">|</span>
+  <span>Mode: <strong>Stabilize</strong></span>
+  <span class="dim">|</span>
+  <span style="color:#f44336">ARMED</span>
+  <span class="dim">|</span>
+  <span>Alt: 45.2m</span>
+  <span class="dim">|</span>
+  <span>GS: 8.3m/s</span>
+  <span class="dim">|</span>
+  <span>Batt: 12.4V</span>
+</div>
+
+<script>
+// Generate chart data
+function drawChart(canvasId, color, freq, amplitude) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 400;
+  
+  const w = canvas.width, h = canvas.height;
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 0.5;
+  for (let y = 0; y < h; y += h/6) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  for (let x = 0; x < w; x++) {
+    const t = x / w * 2;
+    const y = h/2 + Math.sin(t * freq * Math.PI * 2) * amplitude + Math.sin(t * freq * 3.7 * Math.PI * 2) * amplitude * 0.3 + (Math.random()-0.5)*10;
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+drawChart('accelChart', '#f44336', 2, 60);
+drawChart('gyroChart', '#2196f3', 1.5, 50);
+</script>
+
+</body>
+</html>

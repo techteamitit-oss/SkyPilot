@@ -1,0 +1,20 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+
+## Publish outputs
+publish/
+publish-compressed/
+publish-standalone/
+publish-minimal/
+
+## IDE
+.vs/
+*.swp
+*~
