@@ -11,8 +11,9 @@ namespace SkyPilot.Panels;
 public class SensorDashboardPanel : UserControl
 {
     private readonly TabControl tabControl;
-    private readonly ScottPlot.WinForms.FormsPlot chartAccel;
-    private readonly ScottPlot.WinForms.FormsPlot chartGyro;
+    private ScottPlot.WinForms.FormsPlot? chartAccel;
+    private ScottPlot.WinForms.FormsPlot? chartGyro;
+    private bool _chartsAvailable = true;
     private readonly List<double> accelXData = new(), accelYData = new(), accelZData = new();
     private readonly List<double> gyroXData = new(), gyroYData = new(), gyroZData = new();
     private readonly List<double> timeData = new();
@@ -35,14 +36,30 @@ public class SensorDashboardPanel : UserControl
         // === RAW SENSORS TAB ===
         var rawTab = new TabPage("Raw Sensors") { BackColor = Color.FromArgb(30, 30, 30) };
 
-        chartAccel = new ScottPlot.WinForms.FormsPlot { Dock = DockStyle.Top, Height = 280 };
-        ChartHelper.SetupChart(chartAccel, "Accelerometer", "Time (s)", "m/s²");
+        try
+        {
+            chartAccel = new ScottPlot.WinForms.FormsPlot { Dock = DockStyle.Top, Height = 280 };
+            ChartHelper.SetupChart(chartAccel, "Accelerometer", "Time (s)", "m/s²");
 
-        chartGyro = new ScottPlot.WinForms.FormsPlot { Dock = DockStyle.Top, Height = 280 };
-        ChartHelper.SetupChart(chartGyro, "Gyroscope", "Time (s)", "deg/s");
+            chartGyro = new ScottPlot.WinForms.FormsPlot { Dock = DockStyle.Top, Height = 280 };
+            ChartHelper.SetupChart(chartGyro, "Gyroscope", "Time (s)", "deg/s");
 
-        rawTab.Controls.Add(chartGyro);
-        rawTab.Controls.Add(chartAccel);
+            rawTab.Controls.Add(chartGyro);
+            rawTab.Controls.Add(chartAccel);
+        }
+        catch
+        {
+            _chartsAvailable = false;
+            var unavailable = new Label
+            {
+                Text = "Charts unavailable\nScottPlot font initialization failed.\nVibration bars and EKF status still work.",
+                ForeColor = Color.Gray,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new System.Drawing.Font("Segoe UI", 12F)
+            };
+            rawTab.Controls.Add(unavailable);
+        }
 
         // === VIBRATION TAB ===
         var vibTab = new TabPage("Vibration") { BackColor = Color.FromArgb(30, 30, 30) };
@@ -148,6 +165,8 @@ public class SensorDashboardPanel : UserControl
 
     private void RefreshCharts()
     {
+        if (!_chartsAvailable || chartAccel == null || chartGyro == null) return;
+
         try
         {
             if (timeData.Count < 2) return;
@@ -205,11 +224,11 @@ public class SensorDashboardPanel : UserControl
         lblVibClip1.Text = $"Secondary: {state.VibeClip1}";
         lblVibClip2.Text = $"Tertiary: {state.VibeClip2}";
 
-        ekfVel.Value = (int)(state.EkfVelVariance * 100);
-        ekfPosH.Value = (int)(state.EkfPosHorizVariance * 100);
-        ekfPosV.Value = (int)(state.EkfPosVertVariance * 100);
-        ekfComp.Value = (int)(state.EkfCompassVariance * 100);
-        ekfTerrain.Value = (int)(state.EkfTerrainAltVariance * 100);
+        ekfVel.Value = Math.Min((int)(state.EkfVelVariance * 100), 100);
+        ekfPosH.Value = Math.Min((int)(state.EkfPosHorizVariance * 100), 100);
+        ekfPosV.Value = Math.Min((int)(state.EkfPosVertVariance * 100), 100);
+        ekfComp.Value = Math.Min((int)(state.EkfCompassVariance * 100), 100);
+        ekfTerrain.Value = Math.Min((int)(state.EkfTerrainAltVariance * 100), 100);
 
         UpdateHealthGrid(state);
     }
