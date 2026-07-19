@@ -282,12 +282,25 @@ function setHome(lat, lon) {
 }
 
 function addWaypoint(lat, lon, index) {
-  var m = L.marker([lat, lon], {icon: L.divIcon({
-    className: 'waypoint-icon',
-    html: '<div class=""waypoint-marker"" data-idx=""' + index + '"" onclick=""removeWaypoint(' + index + ')"">' + index + '</div>',
-    iconSize: [26, 26], iconAnchor: [13, 13]
-  })}).addTo(map);
-  m.bindPopup('WP' + index);
+  var m = L.marker([lat, lon], {
+    draggable: true,
+    icon: L.divIcon({
+      className: 'waypoint-icon',
+      html: '<div class=""waypoint-marker"" data-idx=""' + index + '"" onclick=""removeWaypoint(' + index + ')"">' + index + '</div>',
+      iconSize: [26, 26], iconAnchor: [13, 13]
+    })
+  }).addTo(map);
+  m.bindPopup('WP' + index + '<br><small>Drag to move | Click to remove</small>');
+  m.on('dragend', function(e) {
+    var pos = e.target.getLatLng();
+    var wi = waypointMarkers.findIndex(function(w) { return w.index === index; });
+    if (wi >= 0) {
+      waypointMarkers[wi].lat = pos.lat;
+      waypointMarkers[wi].lon = pos.lng;
+      updateRoute();
+      window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'waypointMoved', index:index, lat:pos.lat, lon:pos.lng}));
+    }
+  });
   waypointMarkers.push({marker: m, index: index, lat: lat, lon: lon});
   updateRoute();
   updateWpCount();
