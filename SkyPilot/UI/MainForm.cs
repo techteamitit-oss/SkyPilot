@@ -3,6 +3,7 @@ using SkyPilot.Core.Sim;
 using SkyPilot.Log;
 using SkyPilot.Panels;
 using SkyPilot.Utils;
+using SkyPilot.Core.Audio;
 
 namespace SkyPilot.UI;
 
@@ -27,6 +28,7 @@ public partial class MainForm : Form
     private MissionPanel? _missionPanel;
     private ParameterPanel? _paramPanel;
     private MapPanel? _mapPanel;
+    private AudioCallout? _audioCallout;
 
     // Nav state
     private Panels.ModernButton? _activeNav;
@@ -110,6 +112,7 @@ public partial class MainForm : Form
         _missionPanel = new MissionPanel();
         _paramPanel = new ParameterPanel();
         _mapPanel = new MapPanel();
+        _audioCallout = new AudioCallout();
         _mapPanel.WaypointAdded += (lat, lon, idx) =>
         {
             _missionPanel?.AddWaypointFromMap(lat, lon);
@@ -505,6 +508,7 @@ public partial class MainForm : Form
     {
         _statusTimer.Stop();
         _heartbeatTimer.Stop();
+        _audioCallout?.Dispose();
         _stream.Dispose();
         _settings.Save();
         base.OnFormClosing(e);
