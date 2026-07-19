@@ -221,9 +221,8 @@ var homeMarker = null;
 var addMode = false;
 var waypointIndex = 0;
 
-// Click to add waypoint
+// Click to add waypoint - always works
 map.on('click', function(e) {
-  if (!addMode) return;
   waypointIndex++;
   var lat = e.latlng.lat;
   var lon = e.latlng.lng;
@@ -260,11 +259,7 @@ function clearAllWaypoints() {
 }
 
 function toggleAddMode() {
-  addMode = !addMode;
-  var btn = document.querySelector('#toolbar button.danger');
-  btn.textContent = addMode ? '■ Stop Adding' : '+ Add Mode';
-  btn.style.background = addMode ? 'rgba(255,51,102,0.5)' : 'rgba(255,51,102,0.2)';
-  map.getContainer().style.cursor = addMode ? 'crosshair' : '';
+  // No-op - clicking always adds waypoints
 }
 
 function updateRoute() {
