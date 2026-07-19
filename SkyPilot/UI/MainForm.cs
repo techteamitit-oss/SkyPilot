@@ -575,6 +575,10 @@ public partial class MainForm : Form
             _vehicleState.AltitudeRel,
             _vehicleState.GroundSpeed,
             _sim != null ? 0.7f : 0);
+
+        // Update FPV minimap
+        if (_vehicleState.Latitude != 0 && _vehicleState.Longitude != 0)
+            _fpvPanel?.UpdatePosition(_vehicleState.Latitude, _vehicleState.Longitude, _vehicleState.Yaw);
     }
 
     private void ExportKml(string path, List<Waypoint> waypoints)

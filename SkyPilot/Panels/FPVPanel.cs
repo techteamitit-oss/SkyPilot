@@ -12,12 +12,21 @@ public class FPVPanel : UserControl
     private float _pitch, _roll, _heading;
     private float _altitude, _speed;
     private float _throttle;
+    private readonly MiniMapControl _miniMap;
 
     public FPVPanel()
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         BackColor = Color.FromArgb(13, 17, 23);
+
+        _miniMap = new MiniMapControl
+        {
+            Size = new Size(160, 160),
+            Location = new Point(10, 10),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left
+        };
+        Controls.Add(_miniMap);
     }
 
     public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle)
@@ -29,6 +38,11 @@ public class FPVPanel : UserControl
         _speed = speed;
         _throttle = throttle;
         Invalidate();
+    }
+
+    public void UpdatePosition(double lat, double lon, float heading)
+    {
+        _miniMap.UpdatePosition(lat, lon, heading);
     }
 
     protected override void OnPaint(PaintEventArgs e)
