@@ -99,3 +99,43 @@ public class ConnectUdpDialog : Form
         AcceptButton = btnConnect;
     }
 }
+
+public class ConnectTcpDialog : Form
+{
+    public string SelectedHost => txtHost.Text;
+    public int SelectedPort => int.Parse(txtPort.Text);
+
+    private readonly TextBox txtHost;
+    private readonly TextBox txtPort;
+    private readonly Button btnConnect;
+
+    public ConnectTcpDialog(AppSettings settings)
+    {
+        Text = "Connect TCP";
+        Size = new Size(350, 180);
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        StartPosition = FormStartPosition.CenterParent;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        BackColor = Color.FromArgb(35, 35, 35);
+        ForeColor = Color.White;
+
+        Controls.Add(new Label { Text = "Host:", Location = new Point(20, 25), AutoSize = true });
+        txtHost = new TextBox { Location = new Point(80, 22), Width = 200, Text = settings.LastUdpHost };
+        Controls.Add(txtHost);
+
+        Controls.Add(new Label { Text = "Port:", Location = new Point(20, 60), AutoSize = true });
+        txtPort = new TextBox { Location = new Point(80, 57), Width = 200, Text = "5762" };
+        Controls.Add(txtPort);
+
+        btnConnect = new Button
+        {
+            Text = "Connect",
+            Location = new Point(120, 100),
+            Size = new Size(100, 30),
+            DialogResult = DialogResult.OK
+        };
+        Controls.Add(btnConnect);
+        AcceptButton = btnConnect;
+    }
+}

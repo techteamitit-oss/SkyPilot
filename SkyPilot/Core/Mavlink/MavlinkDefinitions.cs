@@ -45,6 +45,11 @@ public static class MavlinkDefinitions
     public const byte TERRAIN_REPORT = 234;
     public const byte AHRS2 = 154;
     public const ushort SYSTEM_TIME_UINT64 = 283;
+    public const byte STATUSTEXT = 253;
+    public const byte PARAM_VALUE = 22;
+    public const byte PARAM_SET = 23;
+    public const byte PARAM_REQUEST_LIST = 21;
+    public const byte PARAM_REQUEST_READ = 20;
 
     // MAV_STATE
     public const byte MAV_STATE_UNINIT = 0;

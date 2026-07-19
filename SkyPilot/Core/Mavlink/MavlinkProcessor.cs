@@ -8,6 +8,9 @@ public class MavlinkProcessor
     private readonly VehicleState _state;
 
     public event Action? StateUpdated;
+    public event Action<string, byte>? MessageReceived;
+    public event Action<byte, byte, byte>? CommandAckReceived;
+    public event Action<string, float>? ParameterReceived;
 
     public MavlinkProcessor(VehicleState state)
     {
@@ -59,6 +62,15 @@ public class MavlinkProcessor
                 break;
             case MavlinkDefinitions.RC_CHANNELS:
                 ProcessRcChannels(packet);
+                break;
+            case MavlinkDefinitions.STATUSTEXT:
+                ProcessStatustext(packet);
+                break;
+            case MavlinkDefinitions.COMMAND_ACK:
+                ProcessCommandAck(packet);
+                break;
+            case MavlinkDefinitions.PARAM_VALUE:
+                ProcessParamValue(packet);
                 break;
         }
 
@@ -204,5 +216,42 @@ public class MavlinkProcessor
         {
             _state.RcChannels[i] = p.GetUInt16(2 + i * 2) / 1000f;
         }
+    }
+
+    private void ProcessStatustext(MavlinkPacket p)
+    {
+        byte severity = p.GetByte(0);
+        // Text starts at offset 1, null-terminated
+        var textBytes = new List<byte>();
+        for (int i = 1; i < p.Payload.Length; i++)
+        {
+            byte b = p.Payload[i];
+            if (b == 0) break;
+            textBytes.Add(b);
+        }
+        string text = System.Text.Encoding.ASCII.GetString(textBytes.ToArray());
+        MessageReceived?.Invoke(text, severity);
+    }
+
+    private void ProcessCommandAck(MavlinkPacket p)
+    {
+        byte command = p.GetByte(0);
+        byte result = p.GetByte(1);
+        CommandAckReceived?.Invoke(command, result, p.SystemId);
+    }
+
+    private void ProcessParamValue(MavlinkPacket p)
+    {
+        // PARAM_VALUE: param_id (16 bytes), param_value (float), param_type (2 bytes)
+        var nameBytes = new List<byte>();
+        for (int i = 0; i < 16; i++)
+        {
+            byte b = p.Payload[i];
+            if (b == 0) break;
+            nameBytes.Add(b);
+        }
+        string name = System.Text.Encoding.ASCII.GetString(nameBytes.ToArray());
+        float value = p.GetFloat(16);
+        ParameterReceived?.Invoke(name, value);
     }
 }
