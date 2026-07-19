@@ -12,6 +12,7 @@ public class FPVPanel : UserControl
     private float _pitch, _roll, _heading;
     private float _altitude, _speed;
     private float _throttle;
+    private float _battery;
     private readonly MiniMapControl _miniMap;
     private bool _recording;
     private string? _recordDir;
@@ -57,7 +58,7 @@ public class FPVPanel : UserControl
         Controls.Add(_recBtn);
     }
 
-    public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle)
+    public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle, float battery)
     {
         _pitch = pitch;
         _roll = roll;
@@ -65,6 +66,7 @@ public class FPVPanel : UserControl
         _altitude = altitude;
         _speed = speed;
         _throttle = throttle;
+        _battery = battery;
         Invalidate();
     }
 
@@ -290,6 +292,9 @@ public class FPVPanel : UserControl
         // === THROTTLE BAR (bottom left) ===
         DrawThrottleBar(g, 10, h - 30, 80, 12);
 
+        // === BATTERY INDICATOR (bottom left, below throttle) ===
+        DrawBatteryIndicator(g, 10, h - 55, 80, 12);
+
         // === COMPASS ROSE (bottom right) ===
         DrawCompassRose(g, w - 70, h - 80);
 
@@ -476,6 +481,24 @@ public class FPVPanel : UserControl
         using var font = new Font("Cascadia Code", 7f);
         using var brush = new SolidBrush(ModernTheme.TextPrimary);
         g.DrawString($"THR {fill * 100:F0}%", font, brush, x + 2, y - 12);
+    }
+
+    private void DrawBatteryIndicator(Graphics g, int x, int y, int w, int h)
+    {
+        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        g.FillRectangle(bgBrush, x, y, w, h);
+        using var borderPen = new Pen(Color.FromArgb(80, 0, 212, 255), 1);
+        g.DrawRectangle(borderPen, x, y, w, h);
+
+        float fill = Math.Clamp(_battery, 0, 100) / 100f;
+        Color barColor = fill > 0.5f ? ModernTheme.Success :
+                         fill > 0.2f ? ModernTheme.Warning : ModernTheme.Danger;
+        using var barBrush = new SolidBrush(barColor);
+        g.FillRectangle(barBrush, x + 1, y + 1, (int)((w - 2) * fill), h - 2);
+
+        using var font = new Font("Cascadia Code", 7f);
+        using var brush = new SolidBrush(ModernTheme.TextPrimary);
+        g.DrawString($"BAT {_battery:F0}%", font, brush, x + 2, y - 12);
     }
 
     private void DrawCompassRose(Graphics g, int cx, int cy)

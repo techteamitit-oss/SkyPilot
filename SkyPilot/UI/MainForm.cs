@@ -94,6 +94,8 @@ public partial class MainForm : Form
         SetupWindowControls();
         WireEvents();
 
+        trackWind.ValueChanged += (s, e) => _sim?.SetWind(trackWind.Value, 0);
+
         SwitchTab(navOverview, _overviewPanel!);
     }
 
@@ -429,6 +431,7 @@ public partial class MainForm : Form
         _stream.OpenSimulation(_sim);
         _sticksPanel!.Visible = true;
         _telemetryHud!.Visible = true;
+        _sim?.SetWind(trackWind.Value, 0); // default wind from north
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
         _messageLog?.AddMessage($"Sim: ({_sim.StartLat:F6},{_sim.StartLon:F6}) → ({_sim.TargetLat:F6},{_sim.TargetLon:F6})", 6);
@@ -582,7 +585,8 @@ public partial class MainForm : Form
             _vehicleState.Yaw,
             _vehicleState.AltitudeRel,
             _vehicleState.GroundSpeed,
-            _sim != null ? 0.7f : 0);
+            _sim != null ? 0.7f : 0,
+            _vehicleState.BatteryRemaining);
 
         // Update FPV minimap
         if (_vehicleState.Latitude != 0 && _vehicleState.Longitude != 0)
