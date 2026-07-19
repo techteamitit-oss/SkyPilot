@@ -149,21 +149,104 @@ public class MissionPanel : UserControl
 
     private void SaveMission()
     {
-        using var sfd = new SaveFileDialog { Filter = "Mission files|*.mission|All files|*.*", FileName = "mission.mission" };
+        using var sfd = new SaveFileDialog
+        {
+            Filter = "Waypoint files|*.waypoints|Mission files|*.mission|All files|*.*",
+            FileName = "mission.waypoints"
+        };
         if (sfd.ShowDialog() != DialogResult.OK) return;
 
+        if (sfd.FileName.EndsWith(".waypoints"))
+            SaveWaypointsFormat(sfd.FileName);
+        else
+            SaveMissionFormat(sfd.FileName);
+    }
+
+    private void SaveWaypointsFormat(string path)
+    {
+        // Standard ArduPilot QGC WPL 110 format
+        var lines = new List<string> { "QGC WPL 110" };
+        foreach (var wp in _waypoints)
+        {
+            int frame = 3; // MAV_FRAME_GLOBAL_RELATIVE_ALT
+            int cmd = CommandToMavCmd(wp.Command);
+            lines.Add($"{wp.Seq}\t0\t{frame}\t{cmd}\t{wp.Param1}\t{wp.Param2}\t{wp.Param3}\t{wp.Param4}\t{wp.Lat}\t{wp.Lon}\t{wp.Alt}\t1");
+        }
+        File.WriteAllLines(path, lines);
+    }
+
+    private void SaveMissionFormat(string path)
+    {
         var lines = _waypoints.Select(wp =>
             $"{wp.Seq}\t{wp.Command}\t{wp.Lat}\t{wp.Lon}\t{wp.Alt}\t{wp.Param1}\t{wp.Param2}\t{wp.Param3}\t{wp.Param4}");
-        File.WriteAllLines(sfd.FileName, lines);
+        File.WriteAllLines(path, lines);
     }
 
     private void LoadMission()
     {
-        using var ofd = new OpenFileDialog { Filter = "Mission files|*.mission|All files|*.*" };
+        using var ofd = new OpenFileDialog
+        {
+            Filter = "Waypoint files|*.waypoints|Mission files|*.mission|All files|*.*"
+        };
         if (ofd.ShowDialog() != DialogResult.OK) return;
 
+        var firstLine = File.ReadLines(ofd.FileName).FirstOrDefault() ?? "";
+        if (firstLine.StartsWith("QGC WPL"))
+            LoadWaypointsFormat(ofd.FileName);
+        else
+            LoadMissionFormat(ofd.FileName);
+
+        RefreshGrid();
+    }
+
+    private void LoadWaypointsFormat(string path)
+    {
+        // Standard ArduPilot QGC WPL 110 format:
+        // index, current, frame, command, param1, param2, param3, param4, lat, lon, alt, auto_continue
         _waypoints.Clear();
-        foreach (var line in File.ReadLines(ofd.FileName))
+        bool headerSkipped = false;
+        foreach (var line in File.ReadLines(path))
+        {
+            if (!headerSkipped) { headerSkipped = true; continue; }
+            var parts = line.Split('\t');
+            if (parts.Length < 12) continue;
+
+            int.TryParse(parts[0], out int seq);
+            int.TryParse(parts[3], out int cmdId);
+            double.TryParse(parts[8], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double lat);
+            double.TryParse(parts[9], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double lon);
+            double.TryParse(parts[10], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double alt);
+            double.TryParse(parts[1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double p1);
+            double.TryParse(parts[2], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double p2);
+            double.TryParse(parts[4], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double p3);
+            double.TryParse(parts[5], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out double p4);
+
+            _waypoints.Add(new Waypoint
+            {
+                Seq = seq,
+                Command = MavCmdToCommand(cmdId),
+                Lat = lat,
+                Lon = lon,
+                Alt = alt,
+                Param1 = p1,
+                Param2 = p2,
+                Param3 = p3,
+                Param4 = p4
+            });
+        }
+    }
+
+    private void LoadMissionFormat(string path)
+    {
+        _waypoints.Clear();
+        foreach (var line in File.ReadLines(path))
         {
             var parts = line.Split('\t');
             if (parts.Length < 5) continue;
@@ -171,17 +254,53 @@ public class MissionPanel : UserControl
             {
                 Seq = int.TryParse(parts[0], out var s) ? s : 0,
                 Command = parts[1],
-                Lat = double.TryParse(parts[2], out var la) ? la : 0,
-                Lon = double.TryParse(parts[3], out var lo) ? lo : 0,
-                Alt = double.TryParse(parts[4], out var al) ? al : 50,
-                Param1 = parts.Length > 5 && double.TryParse(parts[5], out var p1) ? p1 : 0,
-                Param2 = parts.Length > 6 && double.TryParse(parts[6], out var p2) ? p2 : 0,
-                Param3 = parts.Length > 7 && double.TryParse(parts[7], out var p3) ? p3 : 0,
-                Param4 = parts.Length > 8 && double.TryParse(parts[8], out var p4) ? p4 : 0
+                Lat = double.TryParse(parts[2], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var la) ? la : 0,
+                Lon = double.TryParse(parts[3], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var lo) ? lo : 0,
+                Alt = double.TryParse(parts[4], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var al) ? al : 50,
+                Param1 = parts.Length > 5 && double.TryParse(parts[5], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var p1) ? p1 : 0,
+                Param2 = parts.Length > 6 && double.TryParse(parts[6], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var p2) ? p2 : 0,
+                Param3 = parts.Length > 7 && double.TryParse(parts[7], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var p3) ? p3 : 0,
+                Param4 = parts.Length > 8 && double.TryParse(parts[8], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var p4) ? p4 : 0
             });
         }
-        RefreshGrid();
     }
+
+    private static int CommandToMavCmd(string cmd) => cmd switch
+    {
+        "WAYPOINT" => 16,
+        "LOITER_UNLIM" => 17,
+        "LOITER_TURNS" => 18,
+        "LOITER_TIME" => 19,
+        "RTL" => 20,
+        "LAND" => 21,
+        "TAKEOFF" => 22,
+        "DO_CHANGE_SPEED" => 178,
+        "DO_SET_ROI" => 201,
+        "CONDITION_DELAY" => 112,
+        _ => 16
+    };
+
+    private static string MavCmdToCommand(int cmd) => cmd switch
+    {
+        16 => "WAYPOINT",
+        17 => "LOITER_UNLIM",
+        18 => "LOITER_TURNS",
+        19 => "LOITER_TIME",
+        20 => "RTL",
+        21 => "LAND",
+        22 => "TAKEOFF",
+        178 => "DO_CHANGE_SPEED",
+        201 => "DO_SET_ROI",
+        112 => "CONDITION_DELAY",
+        _ => $"CMD_{cmd}"
+    };
 
     public void SetWaypoints(List<Waypoint> waypoints)
     {
