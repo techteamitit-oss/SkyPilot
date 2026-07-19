@@ -33,6 +33,7 @@ partial class MainForm
     private Panels.ModernButton navMessages;
     private Panels.ModernButton navParams;
     private Panels.ModernButton navLogs;
+    private Panels.ModernButton navMap;
 
     // Action buttons
     private Panels.ModernButton btnArm;
@@ -118,6 +119,7 @@ partial class MainForm
         navMessages = MakeIconButton(Utils.IconFont.Messages, "Messages", navY + 132, ModernTheme.TextMuted);
         navParams = MakeIconButton(Utils.IconFont.Params, "Parameters", navY + 176, ModernTheme.TextMuted);
         navLogs = MakeIconButton(Utils.IconFont.Logs, "Logs", navY + 220, ModernTheme.TextMuted);
+        navMap = MakeIconButton(Utils.IconFont.Mission, "Map", navY + 264, ModernTheme.TextMuted);
 
         sidePanel.Controls.Add(navOverview);
         sidePanel.Controls.Add(navSensors);
@@ -125,6 +127,7 @@ partial class MainForm
         sidePanel.Controls.Add(navMessages);
         sidePanel.Controls.Add(navParams);
         sidePanel.Controls.Add(navLogs);
+        sidePanel.Controls.Add(navMap);
 
         // Divider
         var divider = new Panel { Location = new Point(12, navY + 270), Width = 32, Height = 1, BackColor = ModernTheme.Border };

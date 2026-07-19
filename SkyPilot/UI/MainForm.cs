@@ -26,6 +26,7 @@ public partial class MainForm : Form
     private MessageLogPanel? _messageLog;
     private MissionPanel? _missionPanel;
     private ParameterPanel? _paramPanel;
+    private MapPanel? _mapPanel;
 
     // Nav state
     private Panels.ModernButton? _activeNav;
@@ -106,6 +107,7 @@ public partial class MainForm : Form
         _messageLog = new MessageLogPanel();
         _missionPanel = new MissionPanel();
         _paramPanel = new ParameterPanel();
+        _mapPanel = new MapPanel();
         _paramPanel.RequestAllParams += () => SendParamRequestList();
         _paramPanel.WriteParam += (name, value) => SendParamSet(name, value);
     }
@@ -118,6 +120,7 @@ public partial class MainForm : Form
         navMessages.Click += (s, e) => SwitchTab(navMessages, _messageLog!);
         navParams.Click += (s, e) => SwitchTab(navParams, _paramPanel!);
         navLogs.Click += (s, e) => OpenLogFile();
+        navMap.Click += (s, e) => SwitchTab(navMap, _mapPanel!);
     }
 
     private void SetupWindowControls()
@@ -410,6 +413,8 @@ public partial class MainForm : Form
         _hudPanel?.UpdateFromState(_vehicleState);
         _overviewPanel?.UpdateFromState(_vehicleState);
         _sensorsPanel?.UpdateFromState(_vehicleState);
+        if (_vehicleState.Latitude != 0 && _vehicleState.Longitude != 0)
+            _mapPanel?.UpdatePosition(_vehicleState.Latitude, _vehicleState.Longitude, _vehicleState.Yaw);
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
