@@ -231,12 +231,12 @@ partial class MainForm
         });
         sidePanel.Controls.Add(cmbMode);
 
-        // Exit button at bottom
+        // Exit button at bottom (docked)
         btnExit = new Panels.ModernButton("Exit", ModernTheme.TextMuted)
         {
-            Location = new Point(8, 690),
-            Width = 144,
-            Height = 28
+            Dock = DockStyle.Bottom,
+            Height = 32,
+            Margin = new Padding(8, 4, 8, 4)
         };
         sidePanel.Controls.Add(btnExit);
 

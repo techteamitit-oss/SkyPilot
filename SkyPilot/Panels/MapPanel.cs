@@ -278,23 +278,32 @@ function updateWpCount() {
 }
 
 var firstUpdate = true;
+var mapReady = false;
 function updateVehicle(lat, lon, heading) {
   vehicleMarker.setLatLng([lat, lon]);
   var el = vehicleMarker.getElement();
   if (el) { var svg = el.querySelector('svg'); if (svg) svg.style.transform = 'rotate(' + heading + 'deg)'; }
-  if (firstUpdate) {
-    map.setView([lat, lon], 16);
+  if (firstUpdate || !mapReady) {
+    map.setView([lat, lon], 16, {animate: false});
     firstUpdate = false;
+    mapReady = true;
   } else {
-    map.panTo([lat, lon], {animate: true, duration: 0.3});
+    // Only pan slightly to keep vehicle visible
+    var currentCenter = map.getCenter();
+    var distLat = Math.abs(currentCenter.lat - lat);
+    var distLng = Math.abs(currentCenter.lng - lon);
+    if (distLat > 0.0005 || distLng > 0.0005) {
+      map.panTo([lat, lon], {animate: true, duration: 0.5});
+    }
   }
 }
 
+var trackInited = false;
 function updateTrack(points) {
   if (points.length > 2) {
-    // Only keep last 500 points to prevent performance issues
     if (points.length > 500) points = points.slice(-500);
     trackLine.setLatLngs(points);
+    // Don't zoom to fit - keep current view
   }
 }
 
