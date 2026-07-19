@@ -1,4 +1,5 @@
 using SkyPilot.Utils;
+using System.Text.Json;
 
 namespace SkyPilot.Panels;
 
@@ -29,8 +30,8 @@ public class MapPanel : UserControl
     /// <summary>Fires when user right-clicks to remove a waypoint. Args: waypointIndex</summary>
     public event Action<int>? WaypointRemoved;
 
-    /// <summary>Fires when JS sends waypoints for simulator start/target. Args: list of (lat,lon)</summary>
-    public event Action<List<(double Lat, double Lon)>>? WaypointsForSimReceived;
+    /// <summary>Fires when user clicks map (in any mode). Args: lat, lon</summary>
+    public event Action<double, double>? MapClicked;
 
     public MapPanel()
     {
@@ -82,38 +83,28 @@ public class MapPanel : UserControl
         try
         {
             string msg = e.WebMessageAsJson;
-            // Format: {"type":"addWaypoint","lat":51.5,"lon":-0.1}
-            // or: {"type":"removeWaypoint","index":2}
-            if (msg.Contains("addWaypoint"))
+            var doc = JsonDocument.Parse(msg);
+            var root = doc.RootElement;
+            var type = root.GetProperty("type").GetString() ?? "";
+
+            if (type == "addWaypoint")
             {
-                var lat = double.Parse(msg.Split("\"lat\":")[1].Split(",")[0]);
-                var lon = double.Parse(msg.Split("\"lon\":")[1].Split("}")[0]);
+                double lat = root.GetProperty("lat").GetDouble();
+                double lon = root.GetProperty("lon").GetDouble();
                 int idx = _waypoints.Count + 1;
                 _waypoints.Add((lat, lon, idx));
                 WaypointAdded?.Invoke(lat, lon, idx);
             }
-            else if (msg.Contains("removeWaypoint"))
+            else if (type == "removeWaypoint")
             {
-                var idx = int.Parse(msg.Split("\"index\":")[1].Split("}")[0]);
+                int idx = root.GetProperty("index").GetInt32();
                 WaypointRemoved?.Invoke(idx);
             }
-            else if (msg.Contains("waypointsForSim"))
+            else if (type == "mapClick")
             {
-                // Parse waypoints array from JS
-                var wpData = msg.Substring(msg.IndexOf('['), msg.LastIndexOf(']') - msg.IndexOf('[') + 1);
-                var wps = new List<(double Lat, double Lon)>();
-                // Simple parse: {"lat":x,"lon":y}
-                var parts = wpData.Split(new[] { "},{" }, StringSplitOptions.None);
-                foreach (var part in parts)
-                {
-                    if (part.Contains("\"lat\"") && part.Contains("\"lon\""))
-                    {
-                        var lat = double.Parse(part.Split("\"lat\":")[1].Split(",")[0]);
-                        var lon = double.Parse(part.Split("\"lon\":")[1].Split("}")[0]);
-                        wps.Add((lat, lon));
-                    }
-                }
-                WaypointsForSimReceived?.Invoke(wps);
+                double lat = root.GetProperty("lat").GetDouble();
+                double lon = root.GetProperty("lon").GetDouble();
+                MapClicked?.Invoke(lat, lon);
             }
         }
         catch { }

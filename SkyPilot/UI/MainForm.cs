@@ -120,6 +120,7 @@ public partial class MainForm : Form
         _mapPanel.WaypointAdded += (lat, lon, idx) =>
         {
             _missionPanel?.AddWaypointFromMap(lat, lon);
+            _messageLog?.AddMessage($"WP{idx} added: ({lat:F6},{lon:F6})", 6);
         };
         _mapPanel.WaypointUpdated += (idx, lat, lon, alt, spd) =>
         {
@@ -341,6 +342,8 @@ public partial class MainForm : Form
 
         // Use waypoints from map: WP1 = start, WP2 = target (for point2point/distance)
         var mapWps = _mapPanel?.GetWaypoints() ?? new();
+        _messageLog?.AddMessage($"Found {mapWps.Count} waypoints on map", 6);
+
         double startLat = mapWps.Count > 0 ? mapWps[0].Lat : _simStartLat;
         double startLon = mapWps.Count > 0 ? mapWps[0].Lon : _simStartLon;
         double targetLat = mapWps.Count > 1 ? mapWps[1].Lat : _simTargetLat;
@@ -356,7 +359,7 @@ public partial class MainForm : Form
         _stream.OpenSimulation(_sim);
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
-        _messageLog?.AddMessage($"Sim started: WP1({startLat:F4},{startLon:F4}) → WP2({targetLat:F4},{targetLon:F4})", 6);
+        _messageLog?.AddMessage($"Sim start: ({startLat:F6},{startLon:F6}) → ({targetLat:F6},{targetLon:F6})", 6);
     }
 
     private void StopSimulatorToolStripMenuItem_Click(object? sender = null, EventArgs? e = null)
