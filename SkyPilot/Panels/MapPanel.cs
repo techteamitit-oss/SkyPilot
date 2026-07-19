@@ -175,11 +175,17 @@ public class MapPanel : UserControl
         try { _webView?.CoreWebView2.ExecuteScriptAsync($"setVehicleType('{vehicleType}')"); } catch { }
     }
 
-    public void ShowFlightPath(double startLat, double startLon, double targetLat, double targetLon, string pattern)
+    public void ShowFlightPath(double startLat, double startLon, double targetLat, double targetLon, string pattern, List<(double Lat, double Lon)>? intermediateWaypoints = null)
     {
         try
         {
-            var json = $"{{startLat:{startLat},startLon:{startLon},targetLat:{targetLat},targetLon:{targetLon},pattern:'{pattern}'}}";
+            var wpJson = "null";
+            if (intermediateWaypoints != null && intermediateWaypoints.Count > 0)
+            {
+                var wpList = string.Join(",", intermediateWaypoints.Select(w => $"{{lat:{w.Lat},lon:{w.Lon}}}"));
+                wpJson = $"[{wpList}]";
+            }
+            var json = $"{{startLat:{startLat},startLon:{startLon},targetLat:{targetLat},targetLon:{targetLon},pattern:'{pattern}',intermediateWaypoints:{wpJson}}}";
             _webView?.CoreWebView2.ExecuteScriptAsync($"showFlightPath({json})");
         } catch { }
     }
@@ -558,28 +564,42 @@ function showFlightPath(opts) {
   flightPathLayers.push(targetMarkerFP);
 
   if (opts.pattern === 'circle') {
-    // Draw circle around start point (~200m radius)
-    var R = 6371000;
-    var dLat = 0.0018;
     circleOverlay = L.circle([opts.startLat, opts.startLon], {
       radius: 200, color: '#00D4FF', fillColor: 'rgba(0,212,255,0.1)',
       fillOpacity: 0.15, weight: 2, dashArray: '8,8'
     }).addTo(map);
     flightPathLayers.push(circleOverlay);
   } else {
-    // Draw route line (green dashed)
-    routeLineFP = L.polyline([
-      [opts.startLat, opts.startLon],
-      [opts.targetLat, opts.targetLon]
-    ], { color: '#00C850', weight: 2, opacity: 0.8, dashArray: '10,6' }).addTo(map);
+    // Build full route: S → intermediate waypoints → T
+    var routeCoords = [[opts.startLat, opts.startLon]];
+    if (opts.intermediateWaypoints) {
+      for (var i = 0; i < opts.intermediateWaypoints.length; i++) {
+        var wp = opts.intermediateWaypoints[i];
+        routeCoords.push([wp.lat, wp.lon]);
+        // Numbered intermediate waypoint marker
+        var wpIdx = i + 1;
+        var m = L.marker([wp.lat, wp.lon], {icon: L.divIcon({
+          className: 'waypoint-icon',
+          html: '<div style=""width:22px;height:22px;background:rgba(0,212,255,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:#fff;box-shadow:0 0 8px rgba(0,212,255,0.7)"">' + wpIdx + '</div>',
+          iconSize: [22, 22], iconAnchor: [11, 11]
+        })}).addTo(map);
+        flightPathLayers.push(m);
+      }
+    }
+    routeCoords.push([opts.targetLat, opts.targetLon]);
+
+    routeLineFP = L.polyline(routeCoords, { color: '#00C850', weight: 2, opacity: 0.8, dashArray: '10,6' }).addTo(map);
     flightPathLayers.push(routeLineFP);
   }
 
   // Fit map to show full path
-  var bounds = L.latLngBounds([
-    [opts.startLat, opts.startLon],
-    [opts.targetLat, opts.targetLon]
-  ]);
+  var allCoords = [[opts.startLat, opts.startLon], [opts.targetLat, opts.targetLon]];
+  if (opts.intermediateWaypoints) {
+    for (var j = 0; j < opts.intermediateWaypoints.length; j++) {
+      allCoords.push([opts.intermediateWaypoints[j].lat, opts.intermediateWaypoints[j].lon]);
+    }
+  }
+  var bounds = L.latLngBounds(allCoords);
   map.fitBounds(bounds, { padding: [60, 60] });
 }
 

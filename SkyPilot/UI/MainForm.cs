@@ -353,13 +353,15 @@ public partial class MainForm : Form
         }
 
         // Use manually set positions from map (Set Start / Set Target buttons)
+        var mapWps = _mapPanel?.GetWaypoints() ?? new();
         _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern,
             startLat: _simStartLat, startLon: _simStartLon,
-            targetLat: _simTargetLat, targetLon: _simTargetLon);
+            targetLat: _simTargetLat, targetLon: _simTargetLon,
+            intermediateWaypoints: mapWps.Count > 0 ? mapWps : null);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapPanel!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
-            _sim.TargetLat, _sim.TargetLon, _selectedPattern);
+            _sim.TargetLat, _sim.TargetLon, _selectedPattern, mapWps.Count > 0 ? mapWps : null);
         _stream.OpenSimulation(_sim);
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;

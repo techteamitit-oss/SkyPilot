@@ -23,6 +23,9 @@ public class VirtualVehicle : IDisposable
     private double _targetLat, _targetLon;
     private double _distanceMeters;
     private double _patternProgress;
+    private List<(double Lat, double Lon)> _routePoints = new();
+    private int _currentLeg = 0;
+    private bool _targetReached = false;
 
     public event Action<MavlinkPacket>? PacketGenerated;
     public bool IsRunning { get; private set; }
@@ -34,7 +37,8 @@ public class VirtualVehicle : IDisposable
     public string Pattern => _pattern;
 
     public VirtualVehicle(string vehicleType = "plane", string pattern = "circle",
-        double? startLat = null, double? startLon = null, double? targetLat = null, double? targetLon = null, double? distance = null)
+        double? startLat = null, double? startLon = null, double? targetLat = null, double? targetLon = null, double? distance = null,
+        List<(double Lat, double Lon)>? intermediateWaypoints = null)
     {
         _vehicleType = vehicleType.ToLower();
         _pattern = pattern.ToLower();
@@ -42,6 +46,17 @@ public class VirtualVehicle : IDisposable
         _startLon = startLon ?? -0.1278;
         _lat = _startLat;
         _lon = _startLon;
+
+        // Build route: Start → intermediates → Target
+        _routePoints.Add((_startLat, _startLon));
+        if (intermediateWaypoints != null)
+        {
+            foreach (var wp in intermediateWaypoints)
+                _routePoints.Add(wp);
+        }
+        _targetLat = targetLat ?? 51.51;
+        _targetLon = targetLon ?? -0.13;
+        _routePoints.Add((_targetLat, _targetLon));
 
         switch (_vehicleType)
         {
@@ -54,17 +69,18 @@ public class VirtualVehicle : IDisposable
         switch (_pattern)
         {
             case "point2point":
-                _targetLat = targetLat ?? 51.51;
-                _targetLon = targetLon ?? -0.13;
                 _distanceMeters = HaversineDistance(_startLat, _startLon, _targetLat, _targetLon);
                 break;
             case "distance":
                 _distanceMeters = distance ?? 500;
-                // Calculate target from start + distance at 0 degrees
                 double bearing = 0;
                 var (tLat, tLon) = DestinationPoint(_startLat, _startLon, _distanceMeters, bearing);
                 _targetLat = tLat;
                 _targetLon = tLon;
+                // Rebuild route with calculated target
+                _routePoints.Clear();
+                _routePoints.Add((_startLat, _startLon));
+                _routePoints.Add((_targetLat, _targetLon));
                 break;
             default: // circle
                 _radius = 0.002;
@@ -112,15 +128,55 @@ public class VirtualVehicle : IDisposable
 
     private void TickPoint2Point()
     {
-        _patternProgress += 0.002;
-        if (_patternProgress >= 1) _patternProgress = 0;
+        if (_currentLeg >= _routePoints.Count - 1)
+        {
+            // Reached final target
+            if (!_targetReached)
+            {
+                _targetReached = true;
+                SendStatustext("TARGET REACHED");
+                _patternProgress = 0;
+            }
+            // RTL: fly back to start
+            double rtlLat = _routePoints[0].Lat + (_lat - _routePoints[0].Lat) * 0.99;
+            double rtlLon = _routePoints[0].Lon + (_lon - _routePoints[0].Lon) * 0.99;
+            double dlat = _routePoints[0].Lat - _lat;
+            double dlon = _routePoints[0].Lon - _lon;
+            _heading = (float)((Math.Atan2(dlon, dlat) * 180.0 / Math.PI + 360) % 360);
+            _lat = rtlLat;
+            _lon = rtlLon;
+            _altitude = _baseAlt;
+            // Reset when close to start
+            if (HaversineDistance(_lat, _lon, _routePoints[0].Lat, _routePoints[0].Lon) < 10)
+            {
+                _targetReached = false;
+                _currentLeg = 0;
+                _patternProgress = 0;
+                _lat = _startLat;
+                _lon = _startLon;
+                SendStatustext("RTL COMPLETE - RESTARTING");
+            }
+            return;
+        }
 
-        double lat = _startLat + (_targetLat - _startLat) * _patternProgress;
-        double lon = _startLon + (_targetLon - _startLon) * _patternProgress;
+        _patternProgress += 0.003;
+        if (_patternProgress >= 1)
+        {
+            _patternProgress = 0;
+            _currentLeg++;
+            if (_currentLeg < _routePoints.Count - 1)
+                SendStatustext($"LEG {_currentLeg}/{_routePoints.Count - 2} COMPLETE");
+            return;
+        }
 
-        double dlat = _targetLat - _startLat;
-        double dlon = _targetLon - _startLon;
-        _heading = (float)((Math.Atan2(dlon, dlat) * 180.0 / Math.PI + 360) % 360);
+        var from = _routePoints[_currentLeg];
+        var to = _routePoints[_currentLeg + 1];
+        double lat = from.Lat + (to.Lat - from.Lat) * _patternProgress;
+        double lon = from.Lon + (to.Lon - from.Lon) * _patternProgress;
+
+        double dlat2 = to.Lat - from.Lat;
+        double dlon2 = to.Lon - from.Lon;
+        _heading = (float)((Math.Atan2(dlon2, dlat2) * 180.0 / Math.PI + 360) % 360);
 
         _lat = lat;
         _lon = lon;
