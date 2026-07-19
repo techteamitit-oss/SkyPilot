@@ -120,6 +120,18 @@ public class MapPanel : UserControl
                     root.GetProperty("lat").GetDouble(),
                     root.GetProperty("lon").GetDouble());
             }
+            else if (type == "moveStart")
+            {
+                SimStartPosReceived?.Invoke(
+                    root.GetProperty("lat").GetDouble(),
+                    root.GetProperty("lon").GetDouble());
+            }
+            else if (type == "moveTarget")
+            {
+                SimTargetPosReceived?.Invoke(
+                    root.GetProperty("lat").GetDouble(),
+                    root.GetProperty("lon").GetDouble());
+            }
         }
         catch { }
     }
@@ -290,6 +302,7 @@ var setTargetActive = false;
 var simStartLat = null, simStartLon = null;
 var simTargetLat = null, simTargetLon = null;
 var simStartMarker = null, simTargetMarker = null;
+var fpOpts = null;
 
 // Stop toolbar clicks from bubbling to map
 document.getElementById('toolbar').addEventListener('click', function(e) { e.stopPropagation(); });
@@ -544,23 +557,40 @@ function clearFlightPath() {
 
 function showFlightPath(opts) {
   clearFlightPath();
+  fpOpts = opts;
 
-  // Start marker (green S)
-  startMarkerFP = L.marker([opts.startLat, opts.startLon], {icon: L.divIcon({
-    className: 'waypoint-icon',
-    html: '<div style=""width:28px;height:28px;background:rgba(0,200,80,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(0,200,80,0.7)"">S</div>',
-    iconSize: [28, 28], iconAnchor: [14, 14]
-  })}).addTo(map);
-  startMarkerFP.bindPopup('<b>Start Position</b>');
+  // Start marker (green S) — draggable
+  startMarkerFP = L.marker([opts.startLat, opts.startLon], {
+    draggable: true,
+    icon: L.divIcon({
+      className: 'waypoint-icon',
+      html: '<div style=""width:28px;height:28px;background:rgba(0,200,80,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(0,200,80,0.7);cursor:move"">S</div>',
+      iconSize: [28, 28], iconAnchor: [14, 14]
+    })
+  }).addTo(map);
+  startMarkerFP.bindPopup('<b>Start</b> (drag to move)');
+  startMarkerFP.on('dragend', function(e) {
+    var pos = e.target.getLatLng();
+    window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'moveStart', lat:pos.lat, lon:pos.lng}));
+    updateFpRoute();
+  });
   flightPathLayers.push(startMarkerFP);
 
-  // Target marker (red T)
-  targetMarkerFP = L.marker([opts.targetLat, opts.targetLon], {icon: L.divIcon({
-    className: 'waypoint-icon',
-    html: '<div style=""width:28px;height:28px;background:rgba(255,51,102,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(255,51,102,0.7)"">T</div>',
-    iconSize: [28, 28], iconAnchor: [14, 14]
-  })}).addTo(map);
-  targetMarkerFP.bindPopup('<b>Target Position</b>');
+  // Target marker (red T) — draggable
+  targetMarkerFP = L.marker([opts.targetLat, opts.targetLon], {
+    draggable: true,
+    icon: L.divIcon({
+      className: 'waypoint-icon',
+      html: '<div style=""width:28px;height:28px;background:rgba(255,51,102,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#fff;box-shadow:0 0 10px rgba(255,51,102,0.7);cursor:move"">T</div>',
+      iconSize: [28, 28], iconAnchor: [14, 14]
+    })
+  }).addTo(map);
+  targetMarkerFP.bindPopup('<b>Target</b> (drag to move)');
+  targetMarkerFP.on('dragend', function(e) {
+    var pos = e.target.getLatLng();
+    window.chrome && window.chrome.webview && window.chrome.webview.postMessage(JSON.stringify({type:'moveTarget', lat:pos.lat, lon:pos.lng}));
+    updateFpRoute();
+  });
   flightPathLayers.push(targetMarkerFP);
 
   if (opts.pattern === 'circle') {
@@ -570,26 +600,7 @@ function showFlightPath(opts) {
     }).addTo(map);
     flightPathLayers.push(circleOverlay);
   } else {
-    // Build full route: S → intermediate waypoints → T
-    var routeCoords = [[opts.startLat, opts.startLon]];
-    if (opts.intermediateWaypoints) {
-      for (var i = 0; i < opts.intermediateWaypoints.length; i++) {
-        var wp = opts.intermediateWaypoints[i];
-        routeCoords.push([wp.lat, wp.lon]);
-        // Numbered intermediate waypoint marker
-        var wpIdx = i + 1;
-        var m = L.marker([wp.lat, wp.lon], {icon: L.divIcon({
-          className: 'waypoint-icon',
-          html: '<div style=""width:22px;height:22px;background:rgba(0,212,255,0.95);border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:#fff;box-shadow:0 0 8px rgba(0,212,255,0.7)"">' + wpIdx + '</div>',
-          iconSize: [22, 22], iconAnchor: [11, 11]
-        })}).addTo(map);
-        flightPathLayers.push(m);
-      }
-    }
-    routeCoords.push([opts.targetLat, opts.targetLon]);
-
-    routeLineFP = L.polyline(routeCoords, { color: '#00C850', weight: 2, opacity: 0.8, dashArray: '10,6' }).addTo(map);
-    flightPathLayers.push(routeLineFP);
+    drawFpRoute(opts);
   }
 
   // Fit map to show full path
@@ -601,6 +612,37 @@ function showFlightPath(opts) {
   }
   var bounds = L.latLngBounds(allCoords);
   map.fitBounds(bounds, { padding: [60, 60] });
+}
+
+function drawFpRoute(opts) {
+  // Remove old route line if exists
+  if (routeLineFP) { map.removeLayer(routeLineFP); routeLineFP = null; }
+  var routeCoords = [[opts.startLat, opts.startLon]];
+  if (opts.intermediateWaypoints) {
+    for (var i = 0; i < opts.intermediateWaypoints.length; i++) {
+      var wp = opts.intermediateWaypoints[i];
+      routeCoords.push([wp.lat, wp.lon]);
+    }
+  }
+  routeCoords.push([opts.targetLat, opts.targetLon]);
+  routeLineFP = L.polyline(routeCoords, { color: '#00C850', weight: 2, opacity: 0.8, dashArray: '10,6' }).addTo(map);
+  flightPathLayers.push(routeLineFP);
+}
+
+function updateFpRoute() {
+  if (!fpOpts || !startMarkerFP || !targetMarkerFP) return;
+  fpOpts.startLat = startMarkerFP.getLatLng().lat;
+  fpOpts.startLon = startMarkerFP.getLatLng().lng;
+  fpOpts.targetLat = targetMarkerFP.getLatLng().lat;
+  fpOpts.targetLon = targetMarkerFP.getLatLng().lng;
+  // Remove old route line from flightPathLayers
+  if (routeLineFP) {
+    var idx = flightPathLayers.indexOf(routeLineFP);
+    if (idx >= 0) flightPathLayers.splice(idx, 1);
+    map.removeLayer(routeLineFP);
+    routeLineFP = null;
+  }
+  if (fpOpts.pattern !== 'circle') drawFpRoute(fpOpts);
 }
 
 function hideFlightPath() { clearFlightPath(); }
