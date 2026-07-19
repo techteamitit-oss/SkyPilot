@@ -107,75 +107,86 @@ partial class MainForm
         sidePanel = new Panel
         {
             Dock = DockStyle.Left,
-            Width = 56,
+            Width = 160,
             BackColor = ModernTheme.Surface
         };
 
-        // Nav buttons (icon-only, stacked vertically)
-        int navY = 8;
-        navOverview = MakeIconButton(Utils.IconFont.Overview, "Overview", navY, ModernTheme.Accent);
-        navSensors = MakeIconButton(Utils.IconFont.Sensors, "Sensors", navY + 44, ModernTheme.TextMuted);
-        navMission = MakeIconButton(Utils.IconFont.Mission, "Mission", navY + 88, ModernTheme.TextMuted);
-        navMessages = MakeIconButton(Utils.IconFont.Messages, "Messages", navY + 132, ModernTheme.TextMuted);
-        navParams = MakeIconButton(Utils.IconFont.Params, "Parameters", navY + 176, ModernTheme.TextMuted);
-        navLogs = MakeIconButton(Utils.IconFont.Logs, "Logs", navY + 220, ModernTheme.TextMuted);
-        navMap = MakeIconButton(Utils.IconFont.Mission, "Map", navY + 264, ModernTheme.TextMuted);
+        // Section: Navigation
+        var navLabel = new Label { Text = "NAVIGATION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 10), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(navLabel);
+
+        navOverview = MakeTextButton("Overview", 30, ModernTheme.Accent);
+        navSensors = MakeTextButton("Sensors", 62, ModernTheme.TextMuted);
+        navMission = MakeTextButton("Mission", 94, ModernTheme.TextMuted);
+        navMessages = MakeTextButton("Messages", 126, ModernTheme.TextMuted);
+        navParams = MakeTextButton("Parameters", 158, ModernTheme.TextMuted);
+        navMap = MakeTextButton("Map", 190, ModernTheme.TextMuted);
+        navLogs = MakeTextButton("Logs", 222, ModernTheme.TextMuted);
 
         sidePanel.Controls.Add(navOverview);
         sidePanel.Controls.Add(navSensors);
         sidePanel.Controls.Add(navMission);
         sidePanel.Controls.Add(navMessages);
         sidePanel.Controls.Add(navParams);
-        sidePanel.Controls.Add(navLogs);
         sidePanel.Controls.Add(navMap);
+        sidePanel.Controls.Add(navLogs);
 
         // Divider
-        var divider = new Panel { Location = new Point(12, navY + 270), Width = 32, Height = 1, BackColor = ModernTheme.Border };
+        var divider = new Panel { Location = new Point(12, 262), Width = 136, Height = 1, BackColor = ModernTheme.Border };
         sidePanel.Controls.Add(divider);
 
-        // Action buttons (smaller, icon-style)
-        int actY = navY + 285;
-        btnArm = MakeSmallButton("▶", "Arm", actY, ModernTheme.Success);
-        btnDisarm = MakeSmallButton("■", "Stop", actY + 38, ModernTheme.Warning);
-        btnTakeoff = MakeSmallButton("▲", "Up", actY + 76, ModernTheme.Accent);
-        btnRTL = MakeSmallButton("↺", "RTL", actY + 114, ModernTheme.Info);
+        // Section: Actions
+        var actLabel = new Label { Text = "ACTIONS", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 272), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(actLabel);
 
-        btnEmergencyStop = new Panels.ModernButton("⚠ STOP", ModernTheme.Danger)
-        {
-            Location = new Point(2, actY + 158),
-            Width = 52,
-            Height = 30
-        };
+        btnArm = MakeTextButton("Arm", 292, ModernTheme.Success);
+        btnDisarm = MakeTextButton("Disarm", 324, ModernTheme.Warning);
+        btnTakeoff = MakeTextButton("Takeoff", 356, ModernTheme.Accent);
+        btnRTL = MakeTextButton("RTL", 388, ModernTheme.Info);
 
         sidePanel.Controls.Add(btnArm);
         sidePanel.Controls.Add(btnDisarm);
         sidePanel.Controls.Add(btnTakeoff);
         sidePanel.Controls.Add(btnRTL);
+
+        btnEmergencyStop = new Panels.ModernButton("EMERGENCY STOP", ModernTheme.Danger)
+        {
+            Location = new Point(8, 425),
+            Width = 144,
+            Height = 32
+        };
         sidePanel.Controls.Add(btnEmergencyStop);
 
-        // Connect/Disconnect at bottom
-        btnConnect = new Panels.ModernButton("⚡", ModernTheme.Accent)
+        // Divider 2
+        var divider2 = new Panel { Location = new Point(12, 468), Width = 136, Height = 1, BackColor = ModernTheme.Border };
+        sidePanel.Controls.Add(divider2);
+
+        // Section: Connection
+        var connLabel = new Label { Text = "CONNECTION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 478), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(connLabel);
+
+        btnConnect = new Panels.ModernButton("Connect", ModernTheme.Accent)
         {
-            Location = new Point(2, 560),
-            Width = 52,
-            Height = 30
+            Location = new Point(8, 498),
+            Width = 68,
+            Height = 28
         };
-        btnDisconnect = new Panels.ModernButton("⊘", ModernTheme.TextMuted)
+        btnDisconnect = new Panels.ModernButton("Disconnect", ModernTheme.TextMuted)
         {
-            Location = new Point(2, 596),
-            Width = 52,
-            Height = 30
+            Location = new Point(82, 498),
+            Width = 70,
+            Height = 28
         };
         sidePanel.Controls.Add(btnConnect);
         sidePanel.Controls.Add(btnDisconnect);
 
-        // Mode selector
+        // Section: Mode
         lblModeSelector = new Label
         {
-            Text = "MODE",
+            Text = "FLIGHT MODE",
             Font = new Font("Segoe UI", 7f, FontStyle.Bold),
             ForeColor = ModernTheme.TextMuted,
-            Location = new Point(6, 640),
+            Location = new Point(12, 538),
             AutoSize = true,
             BackColor = Color.Transparent
         };
@@ -184,7 +195,7 @@ partial class MainForm
         cmbMode = new ComboBox
         {
             Location = new Point(2, 658),
-            Width = 52,
+            Width = 144,
             DropDownStyle = ComboBoxStyle.DropDownList,
             BackColor = ModernTheme.SurfaceLight,
             ForeColor = ModernTheme.TextPrimary,
@@ -263,28 +274,14 @@ partial class MainForm
         return btn;
     }
 
-    private Panels.ModernButton MakeIconButton(string icon, string tooltip, int y, Color color)
+    private Panels.ModernButton MakeTextButton(string text, int y, Color color)
     {
-        var btn = new Panels.ModernButton(icon, color)
+        var btn = new Panels.ModernButton(text, color)
         {
-            Location = new Point(2, y),
-            Width = 52,
-            Height = 38,
-            Font = Utils.IconFont.IconFontMedium
-        };
-        btn.MouseHover += (s, e) => btn.Text = tooltip;
-        btn.MouseLeave += (s, e) => btn.Text = icon;
-        return btn;
-    }
-
-    private Panels.ModernButton MakeSmallButton(string icon, string label, int y, Color color)
-    {
-        var btn = new Panels.ModernButton(icon, color)
-        {
-            Location = new Point(2, y),
-            Width = 52,
-            Height = 30,
-            Font = Utils.IconFont.IconFontSmall
+            Location = new Point(8, y),
+            Width = 144,
+            Height = 26,
+            Font = new Font("Segoe UI", 8.5f)
         };
         return btn;
     }
