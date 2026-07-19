@@ -138,9 +138,9 @@ public class MavlinkProcessor
         _state.GpsFix = p.GetByte(8);
         _state.Latitude = p.GetInt32(9) / 1e7;
         _state.Longitude = p.GetInt32(13) / 1e7;
-        _state.AltitudeMsl = p.GetFloat(17);
+        _state.AltitudeMsl = p.GetInt32(17) / 1000f;
         _state.Hdop = p.GetUInt16(21) / 100f;
-        _state.SatelliteCount = p.GetByte(23);
+        _state.SatelliteCount = p.GetByte(29);
     }
 
     private void ProcessScaledImu(MavlinkPacket p)

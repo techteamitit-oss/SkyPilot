@@ -385,6 +385,10 @@ function clearAllWaypoints() {
   waypointMarkers = [];
   routeLine.setLatLngs([]);
   waypointIndex = 0;
+  // Also clear S/T markers and sim markers
+  clearFlightPath();
+  if (simStartMarker) { map.removeLayer(simStartMarker); simStartMarker = null; simStartLat = null; simStartLon = null; }
+  if (simTargetMarker) { map.removeLayer(simTargetMarker); simTargetMarker = null; simTargetLat = null; simTargetLon = null; }
   updateWpCount();
 }
 

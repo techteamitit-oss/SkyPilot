@@ -288,12 +288,15 @@ public class VirtualVehicle : IDisposable
     {
         var p = new byte[30];
         payload8(p, 0, (ulong)(DateTime.UtcNow - DateTime.MinValue).TotalMilliseconds * 1000);
-        p[8] = 3;
+        p[8] = 3; // fix_type: 3D
         BitConverter.GetBytes((int)(_lat * 1e7)).CopyTo(p, 9);
         BitConverter.GetBytes((int)(_lon * 1e7)).CopyTo(p, 13);
-        BitConverter.GetBytes(_altitude).CopyTo(p, 17);
-        BitConverter.GetBytes((ushort)120).CopyTo(p, 21);
-        p[25] = 14;
+        BitConverter.GetBytes((int)(_altitude * 1000)).CopyTo(p, 17);
+        BitConverter.GetBytes((ushort)120).CopyTo(p, 21); // eph
+        BitConverter.GetBytes((ushort)80).CopyTo(p, 23);  // epv
+        BitConverter.GetBytes((ushort)((int)(_cruiseSpeed * 100))).CopyTo(p, 25); // vel
+        BitConverter.GetBytes((ushort)((int)(_heading * 100))).CopyTo(p, 27); // cog
+        p[29] = 14; // satellites_visible
         Emit(MavlinkCodec.Encode(1, 1, 24, p));
     }
 
