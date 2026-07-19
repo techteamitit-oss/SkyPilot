@@ -26,6 +26,10 @@ public class VirtualVehicle : IDisposable
 
     public event Action<MavlinkPacket>? PacketGenerated;
     public bool IsRunning { get; private set; }
+    public double StartLat => _startLat;
+    public double StartLon => _startLon;
+    public double TargetLat => _targetLat;
+    public double TargetLon => _targetLon;
     public string VehicleType => _vehicleType;
     public string Pattern => _pattern;
 
