@@ -26,6 +26,7 @@ public class OverviewPanel : UserControl
     private Color _ekfColor = ModernTheme.TextMuted;
     private string _posText = "--";
     private readonly CompassWidget _compass;
+    private readonly MiniMapControl _miniMap;
 
     public OverviewPanel()
     {
@@ -80,6 +81,12 @@ public class OverviewPanel : UserControl
             BackColor = ModernTheme.Background
         };
         Controls.Add(_compass);
+
+        _miniMap = new MiniMapControl
+        {
+            Size = new Size(180, 180)
+        };
+        Controls.Add(_miniMap);
     }
 
     protected override void OnResize(EventArgs e)
@@ -124,6 +131,9 @@ public class OverviewPanel : UserControl
         {
             _compass.Location = new Point(Width - 140, 20);
             _compass.Heading = _state.Yaw;
+
+            // Mini map (below compass)
+            _miniMap.Location = new Point(Width - 200, 150);
         }
 
         // Section title
@@ -184,6 +194,10 @@ public class OverviewPanel : UserControl
                     ekfMax < 0.8f ? ModernTheme.Warning : ModernTheme.Danger;
 
         _posText = $"{state.Latitude:F6}  {state.Longitude:F6}";
+
+        // Update mini map
+        if (state.Latitude != 0 && state.Longitude != 0)
+            _miniMap.UpdatePosition(state.Latitude, state.Longitude, state.Yaw);
 
         Invalidate();
     }
