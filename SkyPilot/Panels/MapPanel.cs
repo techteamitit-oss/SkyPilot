@@ -82,8 +82,13 @@ public class MapPanel : UserControl
     {
         try
         {
-            string msg = e.WebMessageAsJson;
-            var doc = JsonDocument.Parse(msg);
+            // WebMessageAsJson wraps string messages in outer quotes and escapes inner quotes
+            // e.g. "{\"type\":\"addWaypoint\",\"lat\":51.5}" — we need to parse this as a string first
+            string json = e.WebMessageAsJson;
+            // Deserialize the outer JSON string to get the inner JSON
+            var outerDoc = JsonDocument.Parse(json);
+            string innerJson = outerDoc.RootElement.GetString() ?? "";
+            var doc = JsonDocument.Parse(innerJson);
             var root = doc.RootElement;
             var type = root.GetProperty("type").GetString() ?? "";
 
@@ -99,12 +104,6 @@ public class MapPanel : UserControl
             {
                 int idx = root.GetProperty("index").GetInt32();
                 WaypointRemoved?.Invoke(idx);
-            }
-            else if (type == "mapClick")
-            {
-                double lat = root.GetProperty("lat").GetDouble();
-                double lon = root.GetProperty("lon").GetDouble();
-                MapClicked?.Invoke(lat, lon);
             }
         }
         catch { }
