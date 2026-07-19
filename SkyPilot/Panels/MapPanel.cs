@@ -207,7 +207,7 @@ public class MapPanel : UserControl
   <button onclick=""syncFromMission()"">Sync Mission</button>
 </div>
 <script>
-var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false });
+var map = L.map('map', { center: [51.5074, -0.1278], zoom: 16, zoomControl: false, attributionControl: false });
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: 'abcd', maxZoom: 19

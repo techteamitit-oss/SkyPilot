@@ -524,22 +524,22 @@ public class InputBox : Form
     public InputBox(string prompt, string defaultValue = "")
     {
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        Size = new Size(320, 140);
+        Size = new Size(320, 180);
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
         BackColor = ModernTheme.Surface;
         ForeColor = ModernTheme.TextPrimary;
 
-        Controls.Add(new Label { Text = prompt, Location = new Point(15, 12), AutoSize = true, ForeColor = ModernTheme.TextSecondary });
-        txtInput = new TextBox { Location = new Point(15, 38), Width = 275, Text = defaultValue, BackColor = ModernTheme.SurfaceLight, ForeColor = ModernTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle };
+        Controls.Add(new Label { Text = prompt, Location = new Point(15, 15), AutoSize = true, ForeColor = ModernTheme.TextSecondary });
+        txtInput = new TextBox { Location = new Point(15, 42), Width = 275, Text = defaultValue, BackColor = ModernTheme.SurfaceLight, ForeColor = ModernTheme.TextPrimary, BorderStyle = BorderStyle.FixedSingle };
         Controls.Add(txtInput);
 
         var btnOk = new Button
         {
             Text = "OK",
-            Location = new Point(110, 75),
-            Size = new Size(80, 28),
+            Location = new Point(110, 100),
+            Size = new Size(80, 32),
             DialogResult = DialogResult.OK,
             BackColor = ModernTheme.Accent,
             ForeColor = Color.White,
