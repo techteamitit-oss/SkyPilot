@@ -30,6 +30,7 @@ public partial class MainForm : Form
     private MapPanel? _mapPanel;
     private AudioCallout? _audioCallout;
     private VirtualStickControl? _virtualSticks;
+    private TelemetryHUD? _telemetryHud;
     private Panel? _mapContainer;
     private Panel? _sticksPanel;
     private bool _manualMode;
@@ -140,9 +141,17 @@ public partial class MainForm : Form
         _sticksPanel.Controls.Add(_virtualSticks);
 
         _mapContainer = new Panel { Dock = DockStyle.Fill, BackColor = ModernTheme.Background };
+        _telemetryHud = new TelemetryHUD
+        {
+            Size = new Size(180, 210),
+            Location = new Point(10, 10),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left
+        };
+        _mapContainer.Controls.Add(_telemetryHud);
         _mapContainer.Controls.Add(_mapPanel);
         _mapContainer.Controls.Add(_sticksPanel);
-        _sticksPanel.Visible = false; // hidden until simulator starts
+        _sticksPanel.Visible = false;
+        _telemetryHud.Visible = false;
         _mapPanel.WaypointAdded += (lat, lon, idx) =>
         {
             _missionPanel?.AddWaypointFromMap(lat, lon);
@@ -400,6 +409,7 @@ public partial class MainForm : Form
             _sim.TargetLat, _sim.TargetLon, _selectedPattern, mapWps.Count > 0 ? mapWps : null);
         _stream.OpenSimulation(_sim);
         _sticksPanel!.Visible = true;
+        _telemetryHud!.Visible = true;
         lblConnection.Text = $"SIM ({_selectedVehicleType}) - {_selectedPattern}";
         lblConnection.ForeColor = ModernTheme.Warning;
         _messageLog?.AddMessage($"Sim: ({_sim.StartLat:F6},{_sim.StartLon:F6}) → ({_sim.TargetLat:F6},{_sim.TargetLon:F6})", 6);
@@ -414,6 +424,7 @@ public partial class MainForm : Form
             _vehicleState.IsConnected = false;
             _mapPanel?.HideFlightPath();
             _sticksPanel!.Visible = false;
+            _telemetryHud!.Visible = false;
             _manualMode = false;
             lblConnection.Text = "Disconnected";
             lblConnection.ForeColor = ModernTheme.TextMuted;
@@ -534,6 +545,16 @@ public partial class MainForm : Form
         _sensorsPanel?.UpdateFromState(_vehicleState);
         if (_vehicleState.Latitude != 0 && _vehicleState.Longitude != 0)
             _mapPanel?.UpdatePosition(_vehicleState.Latitude, _vehicleState.Longitude, _vehicleState.Yaw);
+
+        // Update telemetry HUD
+        _telemetryHud?.UpdateValues(
+            _vehicleState.AltitudeRel,
+            _vehicleState.GroundSpeed,
+            _vehicleState.BatteryRemaining,
+            _vehicleState.Yaw,
+            _vehicleState.FlightModeName,
+            _vehicleState.IsArmed,
+            _vehicleState.SatelliteCount);
     }
 
     private void ExportKml(string path, List<Waypoint> waypoints)
