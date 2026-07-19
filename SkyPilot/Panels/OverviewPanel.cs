@@ -25,6 +25,7 @@ public class OverviewPanel : UserControl
     private string _ekfText = "--";
     private Color _ekfColor = ModernTheme.TextMuted;
     private string _posText = "--";
+    private readonly CompassWidget _compass;
 
     public OverviewPanel()
     {
@@ -72,6 +73,13 @@ public class OverviewPanel : UserControl
         Controls.Add(gaugeSpeed);
         Controls.Add(gaugeAltitude);
         Controls.Add(gaugeSats);
+
+        _compass = new CompassWidget
+        {
+            Size = new Size(120, 120),
+            BackColor = Color.Transparent
+        };
+        Controls.Add(_compass);
     }
 
     protected override void OnResize(EventArgs e)
@@ -110,6 +118,13 @@ public class OverviewPanel : UserControl
 
         // Grid background
         ModernTheme.DrawGridBackground(g, new Rectangle(0, 0, Width, Height));
+
+        // Compass (top right)
+        if (_state != null)
+        {
+            _compass.Location = new Point(Width - 140, 20);
+            _compass.Heading = _state.Yaw;
+        }
 
         // Section title
         using var titleFont = new Font("Segoe UI", 9f, FontStyle.Bold);
