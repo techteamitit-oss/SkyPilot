@@ -34,6 +34,7 @@ partial class MainForm
     private Panels.ModernButton navParams;
     private Panels.ModernButton navLogs;
     private Panels.ModernButton navMap;
+    private Panels.ModernButton navSim;
 
     // Action buttons
     private Panels.ModernButton btnArm;
@@ -120,7 +121,8 @@ partial class MainForm
         navMission = MakeTextButton("Mission", 94, ModernTheme.TextMuted);
         navMessages = MakeTextButton("Messages", 126, ModernTheme.TextMuted);
         navParams = MakeTextButton("Parameters", 158, ModernTheme.TextMuted);
-        navMap = MakeTextButton("Map", 190, ModernTheme.TextMuted);
+        navSim = MakeTextButton("Simulator", 190, ModernTheme.Warning);
+        navMap = MakeTextButton("Map", 222, ModernTheme.TextMuted);
         navLogs = MakeTextButton("Logs", 222, ModernTheme.TextMuted);
 
         sidePanel.Controls.Add(navOverview);
@@ -128,21 +130,22 @@ partial class MainForm
         sidePanel.Controls.Add(navMission);
         sidePanel.Controls.Add(navMessages);
         sidePanel.Controls.Add(navParams);
+        sidePanel.Controls.Add(navSim);
         sidePanel.Controls.Add(navMap);
         sidePanel.Controls.Add(navLogs);
 
         // Divider
-        var divider = new Panel { Location = new Point(12, 262), Width = 136, Height = 1, BackColor = ModernTheme.Border };
+        var divider = new Panel { Location = new Point(12, 290), Width = 136, Height = 1, BackColor = ModernTheme.Border };
         sidePanel.Controls.Add(divider);
 
         // Section: Actions
-        var actLabel = new Label { Text = "ACTIONS", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 272), AutoSize = true, BackColor = Color.Transparent };
+        var actLabel = new Label { Text = "ACTIONS", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 300), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(actLabel);
 
-        btnArm = MakeTextButton("Arm", 292, ModernTheme.Success);
-        btnDisarm = MakeTextButton("Disarm", 324, ModernTheme.Warning);
-        btnTakeoff = MakeTextButton("Takeoff", 356, ModernTheme.Accent);
-        btnRTL = MakeTextButton("RTL", 388, ModernTheme.Info);
+        btnArm = MakeTextButton("Arm", 320, ModernTheme.Success);
+        btnDisarm = MakeTextButton("Disarm", 352, ModernTheme.Warning);
+        btnTakeoff = MakeTextButton("Takeoff", 384, ModernTheme.Accent);
+        btnRTL = MakeTextButton("RTL", 416, ModernTheme.Info);
 
         sidePanel.Controls.Add(btnArm);
         sidePanel.Controls.Add(btnDisarm);
@@ -151,29 +154,29 @@ partial class MainForm
 
         btnEmergencyStop = new Panels.ModernButton("EMERGENCY STOP", ModernTheme.Danger)
         {
-            Location = new Point(8, 425),
+            Location = new Point(8, 453),
             Width = 144,
             Height = 32
         };
         sidePanel.Controls.Add(btnEmergencyStop);
 
         // Divider 2
-        var divider2 = new Panel { Location = new Point(12, 468), Width = 136, Height = 1, BackColor = ModernTheme.Border };
+        var divider2 = new Panel { Location = new Point(12, 496), Width = 136, Height = 1, BackColor = ModernTheme.Border };
         sidePanel.Controls.Add(divider2);
 
         // Section: Connection
-        var connLabel = new Label { Text = "CONNECTION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 478), AutoSize = true, BackColor = Color.Transparent };
+        var connLabel = new Label { Text = "CONNECTION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 506), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(connLabel);
 
         btnConnect = new Panels.ModernButton("Connect", ModernTheme.Accent)
         {
-            Location = new Point(8, 498),
+            Location = new Point(8, 526),
             Width = 68,
             Height = 28
         };
         btnDisconnect = new Panels.ModernButton("Disconnect", ModernTheme.TextMuted)
         {
-            Location = new Point(82, 498),
+            Location = new Point(82, 526),
             Width = 70,
             Height = 28
         };
@@ -186,7 +189,7 @@ partial class MainForm
             Text = "FLIGHT MODE",
             Font = new Font("Segoe UI", 7f, FontStyle.Bold),
             ForeColor = ModernTheme.TextMuted,
-            Location = new Point(12, 538),
+            Location = new Point(12, 566),
             AutoSize = true,
             BackColor = Color.Transparent
         };

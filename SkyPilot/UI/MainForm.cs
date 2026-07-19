@@ -120,6 +120,7 @@ public partial class MainForm : Form
         navMessages.Click += (s, e) => SwitchTab(navMessages, _messageLog!);
         navParams.Click += (s, e) => SwitchTab(navParams, _paramPanel!);
         navLogs.Click += (s, e) => OpenLogFile();
+        navSim.Click += (s, e) => StartSimulatorToolStripMenuItem_Click();
         navMap.Click += (s, e) => SwitchTab(navMap, _mapPanel!);
     }
 
