@@ -3,46 +3,37 @@ namespace SkyPilot.UI;
 partial class MainForm
 {
     private System.ComponentModel.IContainer components = null;
-    private MenuStrip menuStrip;
-    private ToolStrip toolStrip;
+    private Panel sidePanel;
+    private Panel topBar;
+    private Panel contentPanel;
     private StatusStrip statusStrip;
-    private ToolStripStatusLabel lblConnection;
+    private Label lblTitle;
+    private Label lblConnection;
     private ToolStripStatusLabel lblMode;
     private ToolStripStatusLabel lblArmed;
     private ToolStripStatusLabel lblAlt;
     private ToolStripStatusLabel lblSpeed;
     private ToolStripStatusLabel lblBatt;
-    private TabControl tabFlight;
 
-    // Menus
-    private ToolStripMenuItem fileMenu;
-    private ToolStripMenuItem connectSerialToolStripMenuItem;
-    private ToolStripMenuItem connectUdpToolStripMenuItem;
-    private ToolStripMenuItem connectTcpToolStripMenuItem;
-    private ToolStripMenuItem disconnectToolStripMenuItem;
-    private ToolStripMenuItem startSimulatorToolStripMenuItem;
-    private ToolStripMenuItem stopSimulatorToolStripMenuItem;
-    private ToolStripMenuItem openLogFileToolStripMenuItem;
-    private ToolStripMenuItem exitToolStripMenuItem;
+    // Navigation buttons
+    private Panel navButtons;
+    private Panels.ModernButton navOverview;
+    private Panels.ModernButton navSensors;
+    private Panels.ModernButton navMission;
+    private Panels.ModernButton navMessages;
+    private Panels.ModernButton navParams;
+    private Panels.ModernButton navLogs;
 
-    private ToolStripMenuItem flightMenu;
-    private ToolStripMenuItem armToolStripMenuItem;
-    private ToolStripMenuItem disarmToolStripMenuItem;
-    private ToolStripMenuItem rtlToolStripMenuItem;
-    private ToolStripMenuItem autoToolStripMenuItem;
-    private ToolStripMenuItem takeoffToolStripMenuItem;
-    private ToolStripMenuItem landToolStripMenuItem;
+    // Action buttons
+    private Panels.ModernButton btnArm;
+    private Panels.ModernButton btnDisarm;
+    private Panels.ModernButton btnTakeoff;
+    private Panels.ModernButton btnRTL;
+    private Panels.ModernButton btnEmergencyStop;
 
-    // Toolbar buttons
-    private ToolStripButton btnConnect;
-    private ToolStripButton btnArm;
-    private ToolStripButton btnDisarm;
-    private ToolStripButton btnTakeoff;
-    private ToolStripButton btnRTL;
-    private ToolStripComboBox modeCmb;
-    private ToolStripButton btnEmergencyStop;
-    private ToolStripSeparator toolStripSeparator1;
-    private ToolStripSeparator toolStripSeparator2;
+    // Mode selector
+    private Label lblModeSelector;
+    private ComboBox cmbMode;
 
     protected override void Dispose(bool disposing)
     {
@@ -52,192 +43,223 @@ partial class MainForm
 
     private void InitializeComponent()
     {
-        menuStrip = new MenuStrip();
-        toolStrip = new ToolStrip();
-        statusStrip = new StatusStrip();
-        tabFlight = new TabControl();
-
-        // === Menu ===
-        fileMenu = new ToolStripMenuItem();
-        connectSerialToolStripMenuItem = new ToolStripMenuItem();
-        connectUdpToolStripMenuItem = new ToolStripMenuItem();
-        connectTcpToolStripMenuItem = new ToolStripMenuItem();
-        disconnectToolStripMenuItem = new ToolStripMenuItem();
-        startSimulatorToolStripMenuItem = new ToolStripMenuItem();
-        stopSimulatorToolStripMenuItem = new ToolStripMenuItem();
-        openLogFileToolStripMenuItem = new ToolStripMenuItem();
-        exitToolStripMenuItem = new ToolStripMenuItem();
-
-        flightMenu = new ToolStripMenuItem();
-        armToolStripMenuItem = new ToolStripMenuItem();
-        disarmToolStripMenuItem = new ToolStripMenuItem();
-        rtlToolStripMenuItem = new ToolStripMenuItem();
-        autoToolStripMenuItem = new ToolStripMenuItem();
-        takeoffToolStripMenuItem = new ToolStripMenuItem();
-        landToolStripMenuItem = new ToolStripMenuItem();
-
-        // === Status bar ===
-        lblConnection = new ToolStripStatusLabel();
-        lblMode = new ToolStripStatusLabel();
-        lblArmed = new ToolStripStatusLabel();
-        lblAlt = new ToolStripStatusLabel();
-        lblSpeed = new ToolStripStatusLabel();
-        lblBatt = new ToolStripStatusLabel();
-
-        // === Toolbar buttons ===
-        btnConnect = new ToolStripButton();
-        btnArm = new ToolStripButton();
-        btnDisarm = new ToolStripButton();
-        btnTakeoff = new ToolStripButton();
-        btnRTL = new ToolStripButton();
-        modeCmb = new ToolStripComboBox();
-        btnEmergencyStop = new ToolStripButton();
-        toolStripSeparator1 = new ToolStripSeparator();
-        toolStripSeparator2 = new ToolStripSeparator();
-
+        components = new System.ComponentModel.Container();
         SuspendLayout();
 
-        // --- Menu Strip ---
-        fileMenu.Text = "&File";
-        fileMenu.DropDownItems.AddRange(new ToolStripItem[] {
-            connectSerialToolStripMenuItem, connectUdpToolStripMenuItem,
-            connectTcpToolStripMenuItem, disconnectToolStripMenuItem,
-            new ToolStripSeparator(),
-            startSimulatorToolStripMenuItem, stopSimulatorToolStripMenuItem,
-            new ToolStripSeparator(),
-            openLogFileToolStripMenuItem, new ToolStripSeparator(), exitToolStripMenuItem
-        });
-        connectSerialToolStripMenuItem.Text = "Connect &Serial...";
-        connectSerialToolStripMenuItem.Click += connectSerialToolStripMenuItem_Click;
-        connectUdpToolStripMenuItem.Text = "Connect &UDP...";
-        connectUdpToolStripMenuItem.Click += connectUdpToolStripMenuItem_Click;
-        connectTcpToolStripMenuItem.Text = "Connect &TCP...";
-        connectTcpToolStripMenuItem.Click += connectTcpToolStripMenuItem_Click;
-        disconnectToolStripMenuItem.Text = "&Disconnect";
-        disconnectToolStripMenuItem.Click += disconnectToolStripMenuItem_Click;
-        startSimulatorToolStripMenuItem.Text = "Start &Simulator";
-        startSimulatorToolStripMenuItem.Click += startSimulatorToolStripMenuItem_Click;
-        stopSimulatorToolStripMenuItem.Text = "Stop Sim&ulator";
-        stopSimulatorToolStripMenuItem.Click += stopSimulatorToolStripMenuItem_Click;
-        openLogFileToolStripMenuItem.Text = "Open &Log File...";
-        openLogFileToolStripMenuItem.Click += openLogFileToolStripMenuItem_Click;
-        exitToolStripMenuItem.Text = "E&xit";
-        exitToolStripMenuItem.Click += exitToolStripMenuItem_Click;
+        // === TOP BAR ===
+        topBar = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 52,
+            BackColor = Utils.ModernTheme.Surface
+        };
 
-        flightMenu.Text = "&Flight";
-        flightMenu.DropDownItems.AddRange(new ToolStripItem[] {
-            armToolStripMenuItem, disarmToolStripMenuItem,
-            new ToolStripSeparator(),
-            takeoffToolStripMenuItem, landToolStripMenuItem,
-            new ToolStripSeparator(),
-            rtlToolStripMenuItem, autoToolStripMenuItem
-        });
-        armToolStripMenuItem.Text = "&Arm";
-        armToolStripMenuItem.Click += armToolStripMenuItem_Click;
-        disarmToolStripMenuItem.Text = "&Disarm";
-        disarmToolStripMenuItem.Click += disarmToolStripMenuItem_Click;
-        rtlToolStripMenuItem.Text = "&RTL";
-        rtlToolStripMenuItem.Click += rtlToolStripMenuItem_Click;
-        autoToolStripMenuItem.Text = "&Auto";
-        autoToolStripMenuItem.Click += autoToolStripMenuItem_Click;
-        takeoffToolStripMenuItem.Text = "&Takeoff...";
-        takeoffToolStripMenuItem.Click += takeoffToolStripMenuItem_Click;
-        landToolStripMenuItem.Text = "&Land";
-        landToolStripMenuItem.Click += landToolStripMenuItem_Click;
+        lblTitle = new Label
+        {
+            Text = "SkyPilot",
+            Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+            ForeColor = Utils.ModernTheme.Accent,
+            AutoSize = true,
+            Location = new Point(16, 12)
+        };
 
-        menuStrip.Items.AddRange(new ToolStripItem[] { fileMenu, flightMenu });
-        menuStrip.Dock = DockStyle.Top;
+        lblConnection = new Label
+        {
+            Text = "Disconnected",
+            Font = Utils.ModernTheme.FontRegular,
+            ForeColor = Utils.ModernTheme.TextMuted,
+            AutoSize = true,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(900, 18)
+        };
 
-        // --- Toolbar ---
-        btnConnect.Text = "Connect";
-        btnConnect.DisplayStyle = ToolStripItemDisplayStyle.Text;
-        btnConnect.Click += btnConnect_Click;
-        btnConnect.BackColor = Color.FromArgb(50, 50, 50);
+        topBar.Controls.Add(lblTitle);
+        topBar.Controls.Add(lblConnection);
 
-        btnArm.Text = "Arm";
-        btnArm.DisplayStyle = ToolStripItemDisplayStyle.Text;
-        btnArm.Click += btnArm_Click;
-        btnArm.BackColor = Color.FromArgb(50, 50, 50);
+        // === LEFT SIDE PANEL ===
+        sidePanel = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 200,
+            BackColor = Utils.ModernTheme.Surface
+        };
 
-        btnDisarm.Text = "Disarm";
-        btnDisarm.DisplayStyle = ToolStripItemDisplayStyle.Text;
-        btnDisarm.Click += btnDisarm_Click;
-        btnDisarm.BackColor = Color.FromArgb(50, 50, 50);
+        // Nav section label
+        var navLabel = new Label
+        {
+            Text = "NAVIGATION",
+            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+            ForeColor = Utils.ModernTheme.TextMuted,
+            Location = new Point(16, 16),
+            AutoSize = true
+        };
+        sidePanel.Controls.Add(navLabel);
 
-        btnTakeoff.Text = "Takeoff";
-        btnTakeoff.DisplayStyle = ToolStripItemDisplayStyle.Text;
-        btnTakeoff.Click += btnTakeoff_Click;
-        btnTakeoff.BackColor = Color.FromArgb(50, 50, 50);
+        navOverview = MakeNavButton("Overview", 40);
+        navSensors = MakeNavButton("Sensors", 80);
+        navMission = MakeNavButton("Mission", 120);
+        navMessages = MakeNavButton("Messages", 160);
+        navParams = MakeNavButton("Parameters", 200);
+        navLogs = MakeNavButton("Log Analysis", 240);
 
-        btnRTL.Text = "RTL";
-        btnRTL.DisplayStyle = ToolStripItemDisplayStyle.Text;
-        btnRTL.Click += btnRTL_Click;
-        btnRTL.BackColor = Color.FromArgb(50, 50, 50);
+        navOverview.BaseColor = Utils.ModernTheme.Accent; // active
 
-        modeCmb.Text = "Mode...";
-        modeCmb.Width = 120;
-        modeCmb.BackColor = Color.FromArgb(50, 50, 50);
-        modeCmb.ForeColor = Color.White;
-        modeCmb.Items.AddRange(new object[] {
+        sidePanel.Controls.Add(navOverview);
+        sidePanel.Controls.Add(navSensors);
+        sidePanel.Controls.Add(navMission);
+        sidePanel.Controls.Add(navMessages);
+        sidePanel.Controls.Add(navParams);
+        sidePanel.Controls.Add(navLogs);
+
+        // Action section
+        var actionLabel = new Label
+        {
+            Text = "ACTIONS",
+            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+            ForeColor = Utils.ModernTheme.TextMuted,
+            Location = new Point(16, 300),
+            AutoSize = true
+        };
+        sidePanel.Controls.Add(actionLabel);
+
+        btnArm = MakeActionButton("Arm", 330, Utils.ModernTheme.Success);
+        btnDisarm = MakeActionButton("Disarm", 370, Utils.ModernTheme.Warning);
+        btnTakeoff = MakeActionButton("Takeoff", 410, Utils.ModernTheme.Accent);
+        btnRTL = MakeActionButton("RTL", 450, Utils.ModernTheme.Info);
+
+        btnEmergencyStop = new Panels.ModernButton("EMERGENCY STOP", Utils.ModernTheme.Danger)
+        {
+            Location = new Point(12, 495),
+            Width = 176,
+            Height = 36
+        };
+
+        sidePanel.Controls.Add(btnArm);
+        sidePanel.Controls.Add(btnDisarm);
+        sidePanel.Controls.Add(btnTakeoff);
+        sidePanel.Controls.Add(btnRTL);
+        sidePanel.Controls.Add(btnEmergencyStop);
+
+        // Mode selector
+        lblModeSelector = new Label
+        {
+            Text = "FLIGHT MODE",
+            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+            ForeColor = Utils.ModernTheme.TextMuted,
+            Location = new Point(16, 548),
+            AutoSize = true
+        };
+        sidePanel.Controls.Add(lblModeSelector);
+
+        cmbMode = new ComboBox
+        {
+            Location = new Point(12, 570),
+            Width = 176,
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            BackColor = Utils.ModernTheme.SurfaceLight,
+            ForeColor = Utils.ModernTheme.TextPrimary,
+            FlatStyle = FlatStyle.Standard,
+            Font = Utils.ModernTheme.FontRegular
+        };
+        cmbMode.Items.AddRange(new object[] {
             "Stabilize", "Acro", "AltHold", "Auto", "Guided",
             "Loiter", "RTL", "Circle", "Land", "Sport", "PosHold", "Brake"
         });
-        modeCmb.SelectedIndexChanged += modeCmb_SelectedIndexChanged;
+        sidePanel.Controls.Add(cmbMode);
 
-        btnEmergencyStop.Text = "EMERGENCY STOP";
-        btnEmergencyStop.DisplayStyle = ToolStripItemDisplayStyle.Text;
-        btnEmergencyStop.ForeColor = Color.Red;
-        btnEmergencyStop.BackColor = Color.FromArgb(80, 20, 20);
-        btnEmergencyStop.Click += btnEmergencyStop_Click;
+        // Connect/Disconnect buttons at top of side panel
+        var btnConnect = new Panels.ModernButton("Connect", Utils.ModernTheme.Accent)
+        {
+            Location = new Point(12, 620),
+            Width = 85,
+            Height = 32
+        };
+        var btnDisconnect = new Panels.ModernButton("Disconnect", Utils.ModernTheme.TextMuted)
+        {
+            Location = new Point(103, 620),
+            Width = 85,
+            Height = 32
+        };
+        sidePanel.Controls.Add(btnConnect);
+        sidePanel.Controls.Add(btnDisconnect);
 
-        toolStrip.Items.AddRange(new ToolStripItem[] {
-            btnConnect, toolStripSeparator1,
-            btnArm, btnDisarm, btnTakeoff, btnRTL,
-            toolStripSeparator2,
-            modeCmb, btnEmergencyStop
-        });
-        toolStrip.Dock = DockStyle.Top;
-        toolStrip.Padding = new Padding(4, 2, 4, 2);
+        // Store references for event wiring
+        _btnConnect = btnConnect;
+        _btnDisconnect = btnDisconnect;
 
-        // --- Tab pages ---
-        tabFlight.TabPages.Add("tabOverview", "Overview");
-        tabFlight.TabPages.Add("tabSensors", "Sensors");
-        tabFlight.TabPages.Add("tabMission", "Mission");
-        tabFlight.TabPages.Add("tabMessages", "Messages");
-        tabFlight.TabPages.Add("tabParams", "Parameters");
-        tabFlight.TabPages.Add("tabLogs", "Log Analysis");
-        tabFlight.Dock = DockStyle.Fill;
+        // === CONTENT PANEL ===
+        contentPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Utils.ModernTheme.Background,
+            Padding = new Padding(8)
+        };
 
-        // --- Status bar ---
-        lblConnection.Text = "Disconnected";
-        lblConnection.ForeColor = Color.Gray;
-        lblMode.Text = "Mode: --";
-        lblArmed.Text = "Disarmed";
-        lblAlt.Text = "Alt: --";
-        lblSpeed.Text = "GS: --";
-        lblBatt.Text = "Batt: --";
+        // === STATUS BAR ===
+        statusStrip = new StatusStrip
+        {
+            BackColor = Utils.ModernTheme.Surface,
+            SizingGrip = false,
+            Height = 28
+        };
+
+        lblMode = new ToolStripStatusLabel("Mode: --") { ForeColor = Utils.ModernTheme.TextSecondary, Font = Utils.ModernTheme.FontSmall };
+        lblArmed = new ToolStripStatusLabel("Disarmed") { ForeColor = Utils.ModernTheme.Disarmed, Font = Utils.ModernTheme.FontSmall };
+        lblAlt = new ToolStripStatusLabel("Alt: --") { ForeColor = Utils.ModernTheme.TextSecondary, Font = Utils.ModernTheme.FontSmall };
+        lblSpeed = new ToolStripStatusLabel("GS: --") { ForeColor = Utils.ModernTheme.TextSecondary, Font = Utils.ModernTheme.FontSmall };
+        lblBatt = new ToolStripStatusLabel("Batt: --") { ForeColor = Utils.ModernTheme.TextSecondary, Font = Utils.ModernTheme.FontSmall };
+
         statusStrip.Items.AddRange(new ToolStripItem[] {
-            lblConnection, new ToolStripStatusLabel("  |  "),
-            lblMode, new ToolStripStatusLabel("  |  "),
-            lblArmed, new ToolStripStatusLabel("  |  "),
-            lblAlt, new ToolStripStatusLabel("  |  "),
-            lblSpeed, new ToolStripStatusLabel("  |  "),
+            lblMode, new ToolStripStatusLabel("  |  ") { ForeColor = Utils.ModernTheme.Border },
+            lblArmed, new ToolStripStatusLabel("  |  ") { ForeColor = Utils.ModernTheme.Border },
+            lblAlt, new ToolStripStatusLabel("  |  ") { ForeColor = Utils.ModernTheme.Border },
+            lblSpeed, new ToolStripStatusLabel(" | ") { ForeColor = Utils.ModernTheme.Border },
             lblBatt
         });
 
-        // --- MainForm ---
+        // === ASSEMBLE ===
+        Controls.Add(contentPanel);
+        Controls.Add(sidePanel);
+        Controls.Add(topBar);
+        Controls.Add(statusStrip);
+
+        // === MainForm ===
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(1200, 700);
-        Controls.Add(tabFlight);
-        Controls.Add(toolStrip);
-        Controls.Add(statusStrip);
-        Controls.Add(menuStrip);
-        MainMenuStrip = menuStrip;
+        ClientSize = new Size(1280, 780);
+        BackColor = Utils.ModernTheme.Background;
         Name = "MainForm";
-        Text = "SkyPilot - Ground Control Station";
+        Text = "SkyPilot";
         StartPosition = FormStartPosition.CenterScreen;
+        Font = Utils.ModernTheme.FontRegular;
+
         ResumeLayout(false);
         PerformLayout();
     }
+
+    private Panels.ModernButton MakeNavButton(string text, int y)
+    {
+        var btn = new Panels.ModernButton(text, Utils.ModernTheme.SurfaceLight)
+        {
+            Location = new Point(8, y),
+            Width = 184,
+            Height = 32
+        };
+        return btn;
+    }
+
+    private Panels.ModernButton MakeActionButton(string text, int y, Color color)
+    {
+        var btn = new Panels.ModernButton(text, color)
+        {
+            Location = new Point(12, y),
+            Width = 176,
+            Height = 32
+        };
+        return btn;
+    }
+
+    // Store references for event wiring in MainForm.cs
+    private Panels.ModernButton? _btnConnect;
+    private Panels.ModernButton? _btnDisconnect;
 }
