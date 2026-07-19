@@ -1,19 +1,18 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using SkyPilot.Core.Mavlink;
 using SkyPilot.Log;
-using SkyPilot.Utils;
 
 namespace SkyPilot.Panels;
 
 /// <summary>
-/// Unified sensor dashboard with multiple sub-panels for all sensor data.
+/// Unified sensor dashboard with GDI+ charts (no ScottPlot dependency).
 /// </summary>
 public class SensorDashboardPanel : UserControl
 {
     private readonly TabControl tabControl;
-    private ScottPlot.WinForms.FormsPlot? chartAccel;
-    private ScottPlot.WinForms.FormsPlot? chartGyro;
-    private bool _chartsAvailable = true;
+    private readonly SimpleChart chartAccel;
+    private readonly SimpleChart chartGyro;
     private readonly List<double> accelXData = new(), accelYData = new(), accelZData = new();
     private readonly List<double> gyroXData = new(), gyroYData = new(), gyroZData = new();
     private readonly List<double> timeData = new();
@@ -36,30 +35,11 @@ public class SensorDashboardPanel : UserControl
         // === RAW SENSORS TAB ===
         var rawTab = new TabPage("Raw Sensors") { BackColor = Color.FromArgb(30, 30, 30) };
 
-        try
-        {
-            chartAccel = new ScottPlot.WinForms.FormsPlot { Dock = DockStyle.Top, Height = 280 };
-            ChartHelper.SetupChart(chartAccel, "Accelerometer", "Time (s)", "m/s²");
+        chartAccel = new SimpleChart("Accelerometer (m/s²)") { Dock = DockStyle.Top, Height = 280 };
+        chartGyro = new SimpleChart("Gyroscope (deg/s)") { Dock = DockStyle.Top, Height = 280 };
 
-            chartGyro = new ScottPlot.WinForms.FormsPlot { Dock = DockStyle.Top, Height = 280 };
-            ChartHelper.SetupChart(chartGyro, "Gyroscope", "Time (s)", "deg/s");
-
-            rawTab.Controls.Add(chartGyro);
-            rawTab.Controls.Add(chartAccel);
-        }
-        catch
-        {
-            _chartsAvailable = false;
-            var unavailable = new Label
-            {
-                Text = "Charts unavailable\nScottPlot font initialization failed.\nVibration bars and EKF status still work.",
-                ForeColor = Color.Gray,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new System.Drawing.Font("Segoe UI", 12F)
-            };
-            rawTab.Controls.Add(unavailable);
-        }
+        rawTab.Controls.Add(chartGyro);
+        rawTab.Controls.Add(chartAccel);
 
         // === VIBRATION TAB ===
         var vibTab = new TabPage("Vibration") { BackColor = Color.FromArgb(30, 30, 30) };
@@ -165,30 +145,12 @@ public class SensorDashboardPanel : UserControl
 
     private void RefreshCharts()
     {
-        if (!_chartsAvailable || chartAccel == null || chartGyro == null) return;
-
         try
         {
             if (timeData.Count < 2) return;
 
-            chartAccel.Plot.Clear();
-            chartGyro.Plot.Clear();
-
-            double[] timeArr = timeData.ToArray();
-            chartAccel.Plot.Add.Scatter(timeArr, accelXData.ToArray()).Color = ScottPlot.Color.FromHex("FF0000");
-            chartAccel.Plot.Add.Scatter(timeArr, accelYData.ToArray()).Color = ScottPlot.Color.FromHex("00FF00");
-            chartAccel.Plot.Add.Scatter(timeArr, accelZData.ToArray()).Color = ScottPlot.Color.FromHex("0000FF");
-
-            chartGyro.Plot.Add.Scatter(timeArr, gyroXData.ToArray()).Color = ScottPlot.Color.FromHex("FF0000");
-            chartGyro.Plot.Add.Scatter(timeArr, gyroYData.ToArray()).Color = ScottPlot.Color.FromHex("00FF00");
-            chartGyro.Plot.Add.Scatter(timeArr, gyroZData.ToArray()).Color = ScottPlot.Color.FromHex("0000FF");
-
-            double lastTime = timeArr[^1];
-            chartAccel.Plot.Axes.SetLimitsX(lastTime - 10, lastTime);
-            chartGyro.Plot.Axes.SetLimitsX(lastTime - 10, lastTime);
-
-            chartAccel.Refresh();
-            chartGyro.Refresh();
+            chartAccel.SetData(timeData, accelXData, accelYData, accelZData);
+            chartGyro.SetData(timeData, gyroXData, gyroYData, gyroZData);
         }
         catch { }
     }
@@ -275,6 +237,144 @@ public class SensorDashboardPanel : UserControl
             gridHealth.Rows[i].Cells["Enabled"].Style.ForeColor = enabled ? Color.LimeGreen : Color.Red;
             gridHealth.Rows[i].Cells["Present"].Style.ForeColor = present ? Color.LimeGreen : Color.Red;
             gridHealth.Rows[i].Cells["Health"].Style.ForeColor = healthy ? Color.LimeGreen : Color.Red;
+        }
+    }
+}
+
+/// <summary>
+/// Simple GDI+ time-series chart with no external dependencies.
+/// </summary>
+public class SimpleChart : Control
+{
+    private readonly string _title;
+    private List<double> _time = new();
+    private List<double> _y1 = new(), _y2 = new(), _y3 = new();
+    private static readonly Color[] Colors = { Color.Red, Color.LimeGreen, Color.DodgerBlue };
+    private static readonly string[] Labels = { "X", "Y", "Z" };
+
+    public SimpleChart(string title)
+    {
+        _title = title;
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        BackColor = Color.FromArgb(25, 25, 25);
+    }
+
+    public void SetData(List<double> time, List<double> y1, List<double> y2, List<double> y3)
+    {
+        _time = time;
+        _y1 = y1;
+        _y2 = y2;
+        _y3 = y3;
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        int w = Width, h = Height;
+        int padL = 50, padR = 15, padT = 25, padB = 25;
+        int chartW = w - padL - padR;
+        int chartH = h - padT - padB;
+
+        // Background
+        using var bgBrush = new SolidBrush(Color.FromArgb(25, 25, 25));
+        g.FillRectangle(bgBrush, 0, 0, w, h);
+
+        // Title
+        using var titleFont = new Font("Segoe UI", 10f, FontStyle.Bold);
+        g.DrawString(_title, titleFont, Brushes.LightGray, padL, 3);
+
+        if (_time.Count < 2)
+        {
+            using var waitFont = new Font("Segoe UI", 10f);
+            g.DrawString("Waiting for data...", waitFont, Brushes.Gray, w / 2 - 60, h / 2 - 8);
+            return;
+        }
+
+        // Find data range
+        double tMin = _time[^1] - 10; // Show last 10 seconds
+        double tMax = _time[^1];
+        double yMin = double.MaxValue, yMax = double.MinValue;
+
+        for (int i = 0; i < _time.Count; i++)
+        {
+            if (_time[i] < tMin) continue;
+            yMin = Math.Min(yMin, Math.Min(_y1[i], Math.Min(_y2[i], _y3[i])));
+            yMax = Math.Max(yMax, Math.Max(_y1[i], Math.Max(_y2[i], _y3[i])));
+        }
+
+        if (yMin == double.MaxValue) { yMin = -10; yMax = 10; }
+        double yRange = yMax - yMin;
+        if (yRange < 0.1) { yMin -= 0.5; yMax += 0.5; yRange = yMax - yMin; }
+        yMin -= yRange * 0.1;
+        yMax += yRange * 0.1;
+        yRange = yMax - yMin;
+
+        // Grid lines
+        using var gridPen = new Pen(Color.FromArgb(40, 40, 40), 1);
+        using var labelFont = new Font("Consolas", 8f);
+        int gridLines = 5;
+        for (int i = 0; i <= gridLines; i++)
+        {
+            float y = padT + (float)(i * chartH / gridLines);
+            g.DrawLine(gridPen, padL, y, padL + chartW, y);
+            double val = yMax - i * yRange / gridLines;
+            g.DrawString($"{val:F1}", labelFont, Brushes.Gray, 2, y - 6);
+        }
+
+        // Time labels
+        for (int i = 0; i <= 2; i++)
+        {
+            float x = padL + (float)(i * chartW / 2);
+            double t = tMin + i * (tMax - tMin) / 2;
+            g.DrawLine(gridPen, x, padT, x, padT + chartH);
+            g.DrawString($"{t:F0}s", labelFont, Brushes.Gray, x - 8, padT + chartH + 4);
+        }
+
+        // Draw data lines
+        DrawLine(g, _time, _y1, tMin, tMax, yMin, yMax, padL, padT, chartW, chartH, Colors[0]);
+        DrawLine(g, _time, _y2, tMin, tMax, yMin, yMax, padL, padT, chartW, chartH, Colors[1]);
+        DrawLine(g, _time, _y3, tMin, tMax, yMin, yMax, padL, padT, chartW, chartH, Colors[2]);
+
+        // Legend
+        using var legendFont = new Font("Segoe UI", 8f);
+        for (int i = 0; i < 3; i++)
+        {
+            float lx = padL + chartW - 100 + i * 35;
+            using var brush = new SolidBrush(Colors[i]);
+            g.FillRectangle(brush, lx, 5, 10, 10);
+            g.DrawString(Labels[i], legendFont, brush, lx + 13, 3);
+        }
+
+        // Border
+        using var borderPen = new Pen(Color.FromArgb(60, 60, 60), 1);
+        g.DrawRectangle(borderPen, padL, padT, chartW, chartH);
+    }
+
+    private static void DrawLine(Graphics g, List<double> xData, List<double> yData,
+        double xMin, double xMax, double yMin, double yMax,
+        int padL, int padT, int chartW, int chartH, Color color)
+    {
+        using var pen = new Pen(color, 1.5f);
+        bool started = false;
+        float lastX = 0, lastY = 0;
+
+        for (int i = 0; i < xData.Count; i++)
+        {
+            if (xData[i] < xMin) continue;
+
+            float px = padL + (float)((xData[i] - xMin) / (xMax - xMin) * chartW);
+            float py = padT + (float)((yMax - yData[i]) / (yMax - yMin) * chartH);
+
+            if (started)
+                g.DrawLine(pen, lastX, lastY, px, py);
+
+            lastX = px;
+            lastY = py;
+            started = true;
         }
     }
 }
