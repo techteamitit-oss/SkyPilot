@@ -37,6 +37,8 @@ partial class MainForm
     private Panels.ModernButton navSim;
     private ComboBox cmbVehicle;
     private ComboBox cmbPattern;
+    private TrackBar trackAlt;
+    private Label lblAltValue;
 
     // Action buttons
     private Panels.ModernButton btnArm;
@@ -125,8 +127,8 @@ partial class MainForm
         navMessages = MakeTextButton("Messages", 126, ModernTheme.TextMuted);
         navParams = MakeTextButton("Parameters", 158, ModernTheme.TextMuted);
         navSim = MakeTextButton("Simulator", 190, ModernTheme.Warning);
-        navMap = MakeTextButton("Map", 222, ModernTheme.TextMuted);
-        navLogs = MakeTextButton("Logs", 222, ModernTheme.TextMuted);
+        navMap = MakeTextButton("Map", 420, ModernTheme.TextMuted);
+        navLogs = MakeTextButton("Logs", 446, ModernTheme.TextMuted);
 
         sidePanel.Controls.Add(navOverview);
         sidePanel.Controls.Add(navSensors);
@@ -170,6 +172,28 @@ partial class MainForm
         cmbPattern.Items.AddRange(new object[] { "Circle", "Point to Point", "Distance" });
         cmbPattern.SelectedIndex = 0;
         sidePanel.Controls.Add(cmbPattern);
+
+        // Altitude slider
+        var altLabel = new Label { Text = "ALTITUDE", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 365), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(altLabel);
+
+        lblAltValue = new Label { Text = "100m", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, 363), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(lblAltValue);
+
+        trackAlt = new TrackBar
+        {
+            Location = new Point(8, 380),
+            Width = 144,
+            Minimum = 10,
+            Maximum = 500,
+            Value = 100,
+            TickFrequency = 50,
+            BackColor = ModernTheme.Background,
+            ForeColor = ModernTheme.Accent
+        };
+        trackAlt.ValueChanged += (s, e) => { lblAltValue.Text = trackAlt.Value + "m"; };
+        sidePanel.Controls.Add(trackAlt);
+
         sidePanel.Controls.Add(navMap);
         sidePanel.Controls.Add(navLogs);
 

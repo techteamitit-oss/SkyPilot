@@ -38,7 +38,7 @@ public class VirtualVehicle : IDisposable
 
     public VirtualVehicle(string vehicleType = "plane", string pattern = "circle",
         double? startLat = null, double? startLon = null, double? targetLat = null, double? targetLon = null, double? distance = null,
-        List<(double Lat, double Lon)>? intermediateWaypoints = null)
+        List<(double Lat, double Lon)>? intermediateWaypoints = null, float? altitude = null)
     {
         _vehicleType = vehicleType.ToLower();
         _pattern = pattern.ToLower();
@@ -60,9 +60,9 @@ public class VirtualVehicle : IDisposable
 
         switch (_vehicleType)
         {
-            case "copter": _cruiseSpeed = 10f; _baseAlt = 50f; break;
+            case "copter": _cruiseSpeed = 10f; _baseAlt = altitude ?? 50f; break;
             case "rover": _cruiseSpeed = 5f; _baseAlt = 0f; break;
-            default: _cruiseSpeed = 25f; _baseAlt = 100f; break;
+            default: _cruiseSpeed = 25f; _baseAlt = altitude ?? 100f; break;
         }
         _altitude = _baseAlt;
 

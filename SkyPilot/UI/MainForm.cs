@@ -357,7 +357,8 @@ public partial class MainForm : Form
         _sim = new VirtualVehicle(_selectedVehicleType, _selectedPattern,
             startLat: _simStartLat, startLon: _simStartLon,
             targetLat: _simTargetLat, targetLon: _simTargetLon,
-            intermediateWaypoints: mapWps.Count > 0 ? mapWps : null);
+            intermediateWaypoints: mapWps.Count > 0 ? mapWps : null,
+            altitude: trackAlt.Value);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapPanel!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
