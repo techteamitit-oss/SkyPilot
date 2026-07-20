@@ -115,7 +115,7 @@ public partial class MainForm : Form
         _overviewPanel = new OverviewPanel();
         _hudPanel = new NeonHud();
 
-        // Split: HUD left, overview right
+        // OverviewSplit: HUD left, overview right — stored for overview tab
         var overviewSplit = new SplitContainer
         {
             Dock = DockStyle.Fill,
@@ -127,9 +127,9 @@ public partial class MainForm : Form
         overviewSplit.Panel2.BackColor = ModernTheme.Background;
         overviewSplit.SplitterWidth = 4;
         _hudPanel.Dock = DockStyle.Fill;
-        _overviewPanel.Dock = DockStyle.Fill;
+        _hudPanel.Visible = false;
         overviewSplit.Panel1.Controls.Add(_hudPanel);
-        overviewSplit.Panel2.Controls.Add(_overviewPanel);
+        // Don't add _overviewPanel here — it's managed by SwitchTab directly
 
         _sensorsPanel = new SensorDashboardPanel();
         _messageLog = new MessageLogPanel();
