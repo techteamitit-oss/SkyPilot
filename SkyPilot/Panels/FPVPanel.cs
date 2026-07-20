@@ -13,6 +13,11 @@ public class FPVPanel : UserControl
     private float _altitude, _speed;
     private float _throttle;
     private float _battery;
+    private float _verticalSpeed;
+    private double _latitude, _longitude;
+    private bool _armed;
+    private DateTime _armTime = DateTime.MinValue;
+    private TimeSpan _flightTime;
     private readonly MiniMapControl _miniMap;
     private bool _recording;
     private string? _recordDir;
@@ -58,7 +63,7 @@ public class FPVPanel : UserControl
         Controls.Add(_recBtn);
     }
 
-    public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle, float battery)
+    public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle, float battery, float verticalSpeed, bool armed)
     {
         _pitch = pitch;
         _roll = roll;
@@ -67,11 +72,23 @@ public class FPVPanel : UserControl
         _speed = speed;
         _throttle = throttle;
         _battery = battery;
+        _verticalSpeed = verticalSpeed;
+
+        if (armed && !_armed)
+            _armTime = DateTime.UtcNow;
+        else if (!armed)
+            _armTime = DateTime.MinValue;
+
+        _armed = armed;
+        _flightTime = _armed && _armTime != DateTime.MinValue ? DateTime.UtcNow - _armTime : TimeSpan.Zero;
+
         Invalidate();
     }
 
     public void UpdatePosition(double lat, double lon, float heading)
     {
+        _latitude = lat;
+        _longitude = lon;
         _miniMap.UpdatePosition(lat, lon, heading);
     }
 
@@ -297,6 +314,15 @@ public class FPVPanel : UserControl
 
         // === COMPASS ROSE (bottom right) ===
         DrawCompassRose(g, w - 70, h - 80);
+
+        // === VSI (right side, next to altitude tape) ===
+        DrawVSI(g, w - 100, cy, h);
+
+        // === GPS COORDINATES (bottom center) ===
+        DrawGPSCoords(g, cx, h - 30);
+
+        // === FLIGHT TIMER (top left, below minimap + rec btn) ===
+        DrawFlightTimer(g, 10, 210);
 
         // === BORDER ===
         using var borderPen = new Pen(Color.FromArgb(60, 0, 212, 255), 1);
@@ -594,5 +620,120 @@ public class FPVPanel : UserControl
         string hdgText = $"{_heading:F0}\u00B0";
         var hdgSize = g.MeasureString(hdgText, hdgFont);
         g.DrawString(hdgText, hdgFont, hdgBrush, cx - hdgSize.Width / 2, cy + radius + 4);
+    }
+
+    private void DrawVSI(Graphics g, int x, int cy, int h)
+    {
+        int tapeW = 18, tapeH = Math.Min(200, h - 60);
+        int tapeY = cy - tapeH / 2;
+
+        // Background
+        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        g.FillRectangle(bgBrush, x, tapeY, tapeW, tapeH);
+        using var borderPen = new Pen(Color.FromArgb(80, 0, 212, 255), 1);
+        g.DrawRectangle(borderPen, x, tapeY, tapeW, tapeH);
+
+        // Label
+        using var lblFont = new Font("Segoe UI", 6f, FontStyle.Bold);
+        using var lblBrush = new SolidBrush(ModernTheme.TextMuted);
+        g.DrawString("VS", lblFont, lblBrush, x + 2, tapeY - 12);
+
+        // Scale: -10 to +10 m/s, center = 0
+        float maxVS = 10f;
+        float pxPerMs = tapeH / (maxVS * 2);
+
+        // Tick marks
+        using var tickPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
+        using var tickFont = new Font("Cascadia Code", 6f);
+        using var tickBrush = new SolidBrush(ModernTheme.TextMuted);
+        for (int d = -10; d <= 10; d += 5)
+        {
+            int y = cy - (int)(d * pxPerMs);
+            if (y < tapeY + 3 || y > tapeY + tapeH - 3) continue;
+            g.DrawLine(tickPen, x, y, x + tapeW, y);
+            if (d != 0)
+                g.DrawString(d > 0 ? $"+{d}" : d.ToString(), tickFont, tickBrush, x + tapeW + 2, y - 4);
+        }
+
+        // Zero line (thicker)
+        using var zeroPen = new Pen(Color.FromArgb(180, 255, 255, 255), 2);
+        g.DrawLine(zeroPen, x, cy, x + tapeW, cy);
+
+        // Current VS indicator — colored triangle
+        float clampedVS = Math.Clamp(_verticalSpeed, -maxVS, maxVS);
+        int indY = cy - (int)(clampedVS * pxPerMs);
+        Color vsColor = _verticalSpeed > 0.5f ? ModernTheme.Success :
+                        _verticalSpeed < -0.5f ? ModernTheme.Danger : ModernTheme.Accent;
+        using var indBrush = new SolidBrush(vsColor);
+        g.FillPolygon(indBrush, new Point[] {
+            new(x, indY - 4), new(x, indY + 4), new(x - 6, indY)
+        });
+        g.FillPolygon(indBrush, new Point[] {
+            new(x + tapeW, indY - 4), new(x + tapeW, indY + 4), new(x + tapeW + 6, indY)
+        });
+
+        // VS readout
+        using var vsFont = new Font("Cascadia Code", 8f, FontStyle.Bold);
+        using var vsBrush = new SolidBrush(vsColor);
+        string vsText = $"{_verticalSpeed:+0.0;-0.0;0.0} m/s";
+        var vsSize = g.MeasureString(vsText, vsFont);
+        g.DrawString(vsText, vsFont, vsBrush, x - vsSize.Width / 2 + tapeW / 2, tapeY + tapeH + 4);
+    }
+
+    private void DrawGPSCoords(Graphics g, int cx, int y)
+    {
+        if (_latitude == 0 && _longitude == 0) return;
+
+        string latDir = _latitude >= 0 ? "N" : "S";
+        string lonDir = _longitude >= 0 ? "E" : "W";
+        string latText = $"{Math.Abs(_latitude):F7}\u00B0 {latDir}";
+        string lonText = $"{Math.Abs(_longitude):F7}\u00B0 {lonDir}";
+
+        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        using var font = new Font("Cascadia Code", 8f);
+        using var brush = new SolidBrush(ModernTheme.TextMuted);
+        using var borderPen = new Pen(Color.FromArgb(60, 0, 212, 255), 1);
+
+        var latSize = g.MeasureString(latText, font);
+        var lonSize = g.MeasureString(lonText, font);
+        float totalW = Math.Max(latSize.Width, lonSize.Width) + 16;
+        float boxH = 34;
+        int boxX = cx - (int)(totalW / 2);
+
+        g.FillRectangle(bgBrush, boxX, y - 2, totalW, boxH);
+        g.DrawRectangle(borderPen, boxX, y - 2, totalW, boxH);
+
+        // Label
+        using var lblFont = new Font("Segoe UI", 6f, FontStyle.Bold);
+        using var lblBrush = new SolidBrush(ModernTheme.Accent);
+        g.DrawString("GPS", lblFont, lblBrush, boxX + 3, y);
+
+        g.DrawString(latText, font, brush, boxX + 8, y + 2);
+        g.DrawString(lonText, font, brush, boxX + 8, y + 15);
+    }
+
+    private void DrawFlightTimer(Graphics g, int x, int y)
+    {
+        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        using var borderPen = new Pen(Color.FromArgb(60, 0, 212, 255), 1);
+
+        string timeText = _flightTime.TotalHours >= 1
+            ? _flightTime.ToString(@"hh\:mm\:ss")
+            : _flightTime.ToString(@"mm\:ss");
+
+        using var font = new Font("Cascadia Code", 11f, FontStyle.Bold);
+        var sz = g.MeasureString(timeText, font);
+        float boxW = sz.Width + 16;
+
+        g.FillRectangle(bgBrush, x, y, boxW, 24);
+        g.DrawRectangle(borderPen, x, y, boxW, 24);
+
+        using var lblFont = new Font("Segoe UI", 6f, FontStyle.Bold);
+        using var lblBrush = new SolidBrush(ModernTheme.Accent);
+        g.DrawString("FLIGHT", lblFont, lblBrush, x + 3, y - 10);
+
+        Color timerColor = _armed ? ModernTheme.Accent : ModernTheme.TextMuted;
+        using var timerBrush = new SolidBrush(timerColor);
+        g.DrawString(timeText, font, timerBrush, x + 8, y + 2);
     }
 }

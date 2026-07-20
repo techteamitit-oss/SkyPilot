@@ -39,6 +39,10 @@ partial class MainForm
     private ComboBox cmbPattern;
     private TrackBar trackAlt;
     private Label lblAltValue;
+    private TrackBar trackWind;
+    private Label lblWindValue;
+    private TrackBar trackRain;
+    private Label lblRainValue;
 
     // Action buttons
     private Panels.ModernButton btnArm;
@@ -128,8 +132,8 @@ partial class MainForm
         navMessages = MakeTextButton("Messages", 126, ModernTheme.TextMuted);
         navParams = MakeTextButton("Parameters", 158, ModernTheme.TextMuted);
         navSim = MakeTextButton("Simulator", 190, ModernTheme.Warning);
-        navMap = MakeTextButton("Map", 420, ModernTheme.TextMuted);
-        navLogs = MakeTextButton("Logs", 446, ModernTheme.TextMuted);
+        navMap = MakeTextButton("Map", 500, ModernTheme.TextMuted);
+        navLogs = MakeTextButton("Logs", 526, ModernTheme.TextMuted);
 
         sidePanel.Controls.Add(navOverview);
         sidePanel.Controls.Add(navSensors);
@@ -194,6 +198,51 @@ partial class MainForm
         };
         trackAlt.ValueChanged += (s, e) => { lblAltValue.Text = trackAlt.Value + "m"; };
         sidePanel.Controls.Add(trackAlt);
+
+        // Wind speed slider
+        var windLabel = new Label { Text = "WIND", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 410), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(windLabel);
+
+        lblWindValue = new Label { Text = "0 m/s", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, 408), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(lblWindValue);
+
+        trackWind = new TrackBar
+        {
+            Location = new Point(8, 425),
+            Width = 144,
+            Minimum = 0,
+            Maximum = 20,
+            Value = 0,
+            TickFrequency = 5,
+            BackColor = ModernTheme.Background,
+            ForeColor = ModernTheme.Accent
+        };
+        trackWind.ValueChanged += (s, e) => { lblWindValue.Text = trackWind.Value + " m/s"; };
+        sidePanel.Controls.Add(trackWind);
+
+        // Rain intensity slider
+        var rainLabel = new Label { Text = "RAIN", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 455), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(rainLabel);
+
+        lblRainValue = new Label { Text = "Off", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, 453), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(lblRainValue);
+
+        trackRain = new TrackBar
+        {
+            Location = new Point(8, 470),
+            Width = 144,
+            Minimum = 0,
+            Maximum = 3,
+            Value = 0,
+            TickFrequency = 1,
+            BackColor = ModernTheme.Background,
+            ForeColor = ModernTheme.Accent
+        };
+        trackRain.ValueChanged += (s, e) =>
+        {
+            lblRainValue.Text = trackRain.Value switch { 0 => "Off", 1 => "Light", 2 => "Medium", 3 => "Heavy", _ => "Off" };
+        };
+        sidePanel.Controls.Add(trackRain);
 
         sidePanel.Controls.Add(navMap);
         sidePanel.Controls.Add(navLogs);

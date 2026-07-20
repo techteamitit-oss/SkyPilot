@@ -586,7 +586,9 @@ public partial class MainForm : Form
             _vehicleState.AltitudeRel,
             _vehicleState.GroundSpeed,
             _sim != null ? 0.7f : 0,
-            _vehicleState.BatteryRemaining);
+            _vehicleState.BatteryRemaining,
+            _vehicleState.VerticalSpeed,
+            _vehicleState.IsArmed);
 
         // Update FPV minimap
         if (_vehicleState.Latitude != 0 && _vehicleState.Longitude != 0)

@@ -29,6 +29,8 @@ public class VirtualVehicle : IDisposable
     private bool _returningHome = false;
     private bool _manualMode = false;
     private float _manualThrottle, _manualYaw, _manualPitch, _manualRoll;
+    private float _windSpeed; // m/s
+    private float _windDirection; // degrees (where wind comes FROM)
 
     public event Action<MavlinkPacket>? PacketGenerated;
     public bool IsRunning { get; private set; }
@@ -188,6 +190,19 @@ public class VirtualVehicle : IDisposable
         _lat += dlat;
         _lon += dlon;
         _angle += 0.01;
+
+        ApplyWind();
+    }
+
+    private void ApplyWind()
+    {
+        if (_windSpeed <= 0) return;
+        // Wind blows FROM _windDirection, so vehicle drifts in the OPPOSITE direction
+        double windRad = ((_windDirection + 180) % 360) * Math.PI / 180.0;
+        double driftLat = Math.Cos(windRad) * _windSpeed * 0.00000898 * 0.3;
+        double driftLon = Math.Sin(windRad) * _windSpeed * 0.00000898 * 0.3 / Math.Cos(_lat * Math.PI / 180.0);
+        _lat += driftLat;
+        _lon += driftLon;
     }
 
     private void TickPoint2Point()
@@ -245,6 +260,7 @@ public class VirtualVehicle : IDisposable
         _lat = lat;
         _lon = lon;
         _altitude = _baseAlt + (float)Math.Sin(_patternProgress * Math.PI) * 20;
+        ApplyWind();
     }
 
     private void TickDistance()
@@ -478,6 +494,12 @@ public class VirtualVehicle : IDisposable
         }
         _lat = lat;
         _lon = lon;
+    }
+
+    public void SetWind(float speedMs, float directionDeg)
+    {
+        _windSpeed = speedMs;
+        _windDirection = directionDeg;
     }
 
     public void SendStatustext(string text)
