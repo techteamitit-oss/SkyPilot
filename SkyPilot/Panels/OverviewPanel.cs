@@ -43,6 +43,7 @@ public class OverviewPanel : UserControl
 
     private readonly Button _zoomInBtn;
     private readonly Button _zoomOutBtn;
+    private readonly Button _zoomResetBtn;
     private readonly System.Windows.Forms.Timer _tapTimer;
     private bool _pendingSingleTap;
 
@@ -67,6 +68,11 @@ public class OverviewPanel : UserControl
         _zoomOutBtn.FlatAppearance.BorderSize = 0;
         _zoomOutBtn.Click += (s, e) => { _mapZoom = Math.Min(0.01, _mapZoom * 1.4); Invalidate(); };
         Controls.Add(_zoomOutBtn);
+
+        _zoomResetBtn = new Button { Text = "R", Size = new Size(22, 22), BackColor = Color.FromArgb(160, 33, 38, 45), ForeColor = ModernTheme.Accent, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 8f, FontStyle.Bold), Cursor = Cursors.Hand };
+        _zoomResetBtn.FlatAppearance.BorderSize = 0;
+        _zoomResetBtn.Click += (s, e) => { _mapZoom = 0.003; Invalidate(); };
+        Controls.Add(_zoomResetBtn);
 
         Controls.Add(gaugeBattery);
         Controls.Add(gaugeSpeed);
@@ -167,6 +173,7 @@ public class OverviewPanel : UserControl
         // Position zoom buttons over minimap
         _zoomInBtn.Location = new Point(mapX + 2, mapY + 2);
         _zoomOutBtn.Location = new Point(mapX + 26, mapY + 2);
+        _zoomResetBtn.Location = new Point(mapX + 50, mapY + 2);
 
         // Notification banner
         if (!string.IsNullOrEmpty(_notification) && (DateTime.UtcNow - _notificationTime).TotalSeconds < 5)
