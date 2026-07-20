@@ -137,7 +137,24 @@ public class OverviewPanel : UserControl
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
+        // Ensure compass and minimap are always child controls
+        if (!Controls.Contains(_compass)) Controls.Add(_compass);
+        if (!Controls.Contains(_miniMap)) Controls.Add(_miniMap);
         LayoutGauges();
+    }
+
+    protected override void OnVisibleChanged(EventArgs e)
+    {
+        base.OnVisibleChanged(e);
+        if (Visible)
+        {
+            if (!Controls.Contains(_compass)) Controls.Add(_compass);
+            if (!Controls.Contains(_miniMap)) Controls.Add(_miniMap);
+            _compass.BringToFront();
+            _miniMap.BringToFront();
+            LayoutGauges();
+            Invalidate();
+        }
     }
 
     private void LayoutGauges()
