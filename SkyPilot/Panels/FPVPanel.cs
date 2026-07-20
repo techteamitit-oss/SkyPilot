@@ -327,6 +327,9 @@ public class FPVPanel : UserControl
         // === LARGE COMPASS (bottom center) ===
         DrawLargeCompass(g, cx, h - 75);
 
+        // === DIGITAL COMPASS (bottom right) ===
+        DrawDigitalCompass(g, w - 100, h - 25);
+
         // === FLIGHT TIMER (top left, below minimap + rec btn) ===
         DrawFlightTimer(g, 10, 210);
 
@@ -1129,5 +1132,45 @@ public class FPVPanel : UserControl
         g.FillEllipse(antDot, -16, -34, 3, 3);
 
         g.ResetTransform();
+    }
+
+    private void DrawDigitalCompass(Graphics g, int x, int y)
+    {
+        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        using var borderPen = new Pen(Color.FromArgb(80, 0, 212, 255), 1);
+
+        int boxW = 88;
+        int boxH = 22;
+        g.FillRectangle(bgBrush, x, y, boxW, boxH);
+        g.DrawRectangle(borderPen, x, y, boxW, boxH);
+
+        // Heading number
+        using var hdgFont = new Font("Cascadia Code", 12f, FontStyle.Bold);
+        int hdg = ((int)_heading + 360) % 360;
+        string hdgText = hdg.ToString("D3") + "\u00B0";
+        var hdgSize = g.MeasureString(hdgText, hdgFont);
+        using var hdgBrush = new SolidBrush(ModernTheme.Accent);
+        g.DrawString(hdgText, hdgFont, hdgBrush, x + 4, y + (boxH - hdgSize.Height) / 2);
+
+        // Cardinal direction
+        string card = hdg switch
+        {
+            >= 338 or < 23 => "N",
+            >= 23 and < 68 => "NE",
+            >= 68 and < 113 => "E",
+            >= 113 and < 158 => "SE",
+            >= 158 and < 203 => "S",
+            >= 203 and < 248 => "SW",
+            >= 248 and < 293 => "W",
+            _ => "NW"
+        };
+        using var cardFont = new Font("Segoe UI", 8f, FontStyle.Bold);
+        using var cardBrush = new SolidBrush(ModernTheme.TextMuted);
+        g.DrawString(card, cardFont, cardBrush, x + hdgSize.Width + 6, y + (boxH - 8) / 2);
+
+        // Label
+        using var lblFont = new Font("Segoe UI", 6f, FontStyle.Bold);
+        using var lblBrush = new SolidBrush(ModernTheme.Accent);
+        g.DrawString("HDG", lblFont, lblBrush, x + 2, y - 10);
     }
 }
