@@ -28,6 +28,7 @@ public class OverviewPanel : UserControl
 
     // Compass
     private float _heading;
+    private readonly CompassWidget _compass;
 
     // Minimap
     private double _lat, _lon;
@@ -69,6 +70,9 @@ public class OverviewPanel : UserControl
         Controls.Add(gaugeSpeed);
         Controls.Add(gaugeAltitude);
         Controls.Add(gaugeSats);
+
+        _compass = new CompassWidget { Size = new Size(120, 120), BackColor = Color.Transparent };
+        Controls.Add(_compass);
     }
 
     protected override void OnResize(EventArgs e)
@@ -122,7 +126,10 @@ public class OverviewPanel : UserControl
         g.DrawString("FLIGHT OVERVIEW", titleFont, titleBrush, 20, 10);
 
         // === COMPASS (top right) ===
-        DrawCompass(g, Width - 80, 80);
+        _compass.Location = new Point(Width - 140, 15);
+        _compass.Size = new Size(120, 120);
+        _compass.Heading = _heading;
+        _compass.BringToFront();
 
         // === MINIMAP (right side, below compass) ===
         int mapX = Width - 260, mapY = 155, mapW = 240, mapH = 240;
