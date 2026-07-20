@@ -10,7 +10,7 @@ namespace SkyPilot.Panels;
 public class FPVPanel : UserControl
 {
     private float _pitch, _roll, _heading;
-    private float _altitude, _speed;
+    private float _altitude, _speed, _airSpeed;
     private float _throttle;
     private float _battery;
     private float _verticalSpeed;
@@ -63,13 +63,14 @@ public class FPVPanel : UserControl
         Controls.Add(_recBtn);
     }
 
-    public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle, float battery, float verticalSpeed, bool armed)
+    public void UpdateAttitude(float pitch, float roll, float heading, float altitude, float speed, float throttle, float battery, float verticalSpeed, bool armed, float airSpeed)
     {
         _pitch = pitch;
         _roll = roll;
         _heading = heading;
         _altitude = altitude;
         _speed = speed;
+        _airSpeed = airSpeed;
         _throttle = throttle;
         _battery = battery;
         _verticalSpeed = verticalSpeed;
@@ -312,14 +313,14 @@ public class FPVPanel : UserControl
         // === BATTERY INDICATOR (bottom left, below throttle) ===
         DrawBatteryIndicator(g, 10, h - 55, 80, 12);
 
-        // === COMPASS ROSE (bottom right) ===
-        DrawCompassRose(g, w - 70, h - 80);
+        // === AIRSPEED READOUT (top left, below flight timer) ===
+        DrawAirspeedReadout(g, 10, 240);
 
         // === VSI (right side, next to altitude tape) ===
         DrawVSI(g, w - 100, cy, h);
 
-        // === GPS COORDINATES (bottom center) ===
-        DrawGPSCoords(g, cx, h - 30);
+        // === LARGE COMPASS (bottom center) ===
+        DrawLargeCompass(g, cx, h - 75);
 
         // === FLIGHT TIMER (top left, below minimap + rec btn) ===
         DrawFlightTimer(g, 10, 210);
@@ -735,5 +736,132 @@ public class FPVPanel : UserControl
         Color timerColor = _armed ? ModernTheme.Accent : ModernTheme.TextMuted;
         using var timerBrush = new SolidBrush(timerColor);
         g.DrawString(timeText, font, timerBrush, x + 8, y + 2);
+    }
+
+    private void DrawLargeCompass(Graphics g, int cx, int cy)
+    {
+        int radius = 65;
+
+        // Background
+        using var bgBrush = new SolidBrush(Color.FromArgb(120, 13, 17, 23));
+        g.FillEllipse(bgBrush, cx - radius - 8, cy - radius - 8, (radius + 8) * 2, (radius + 8) * 2);
+        using var ringPen = new Pen(Color.FromArgb(100, 0, 212, 255), 1);
+        g.DrawEllipse(ringPen, cx - radius - 8, cy - radius - 8, (radius + 8) * 2, (radius + 8) * 2);
+
+        g.TranslateTransform(cx, cy);
+        g.RotateTransform(-_heading);
+
+        using var tickPen = new Pen(Color.FromArgb(120, 255, 255, 255), 1);
+        using var majorPen = new Pen(Color.FromArgb(200, 255, 255, 255), 2);
+        using var dirFont = new Font("Segoe UI", 10f, FontStyle.Bold);
+        using var degFont = new Font("Cascadia Code", 7f);
+        using var degBrush = new SolidBrush(ModernTheme.TextMuted);
+
+        var directions = new Dictionary<int, (string Label, Color Color)>
+        {
+            {0, ("N", Color.FromArgb(255, 255, 60, 60))},
+            {45, ("NE", ModernTheme.Accent)},
+            {90, ("E", ModernTheme.Accent)},
+            {135, ("SE", ModernTheme.Accent)},
+            {180, ("S", Color.FromArgb(255, 255, 255, 255))},
+            {225, ("SW", ModernTheme.Accent)},
+            {270, ("W", ModernTheme.Accent)},
+            {315, ("NW", ModernTheme.Accent)}
+        };
+
+        for (int deg = 0; deg < 360; deg += 5)
+        {
+            double rad = (deg - 90) * Math.PI / 180.0;
+            bool isMajor = deg % 30 == 0;
+            bool isCardinal = deg % 90 == 0;
+            bool isIntercardinal = deg % 45 == 0 && !isCardinal;
+
+            int innerR = isCardinal ? radius - 16 : isIntercardinal ? radius - 12 : isMajor ? radius - 8 : radius - 4;
+            int x1 = (int)(Math.Cos(rad) * innerR);
+            int y1 = (int)(Math.Sin(rad) * innerR);
+            int x2 = (int)(Math.Cos(rad) * radius);
+            int y2 = (int)(Math.Sin(rad) * radius);
+
+            g.DrawLine(isCardinal ? majorPen : tickPen, x1, y1, x2, y2);
+
+            if (directions.TryGetValue(deg, out var dir))
+            {
+                int labelR = radius - 28;
+                int lx = (int)(Math.Cos(rad) * labelR) - 6;
+                int ly = (int)(Math.Sin(rad) * labelR) - 7;
+                using var dirBrush = new SolidBrush(dir.Color);
+                g.DrawString(dir.Label, dirFont, dirBrush, lx, ly);
+            }
+            else if (isMajor)
+            {
+                int labelR = radius - 20;
+                int lx = (int)(Math.Cos(rad) * labelR) - 6;
+                int ly = (int)(Math.Sin(rad) * labelR) - 5;
+                g.DrawString(deg.ToString(), degFont, degBrush, lx, ly);
+            }
+        }
+
+        g.ResetTransform();
+
+        // Fixed lubber line (triangle at top)
+        using var lubberBrush = new SolidBrush(ModernTheme.Accent);
+        g.FillPolygon(lubberBrush, new Point[] {
+            new(cx - 5, cy - radius - 10),
+            new(cx + 5, cy - radius - 10),
+            new(cx, cy - radius + 2)
+        });
+
+        // Heading readout in center of compass
+        using var hdgFont = new Font("Cascadia Code", 16f, FontStyle.Bold);
+        using var hdgBrush = new SolidBrush(ModernTheme.Accent);
+        string hdgText = $"{_heading:F0}\u00B0";
+        var hdgSize = g.MeasureString(hdgText, hdgFont);
+        g.DrawString(hdgText, hdgFont, hdgBrush, cx - hdgSize.Width / 2, cy - hdgSize.Height / 2);
+
+        // GPS coordinates below compass
+        if (_latitude != 0 || _longitude != 0)
+        {
+            string latDir = _latitude >= 0 ? "N" : "S";
+            string lonDir = _longitude >= 0 ? "E" : "W";
+            string latText = $"{Math.Abs(_latitude):F7}\u00B0{latDir}";
+            string lonText = $"{Math.Abs(_longitude):F7}\u00B0{lonDir}";
+
+            using var coordFont = new Font("Cascadia Code", 8f);
+            using var coordBrush = new SolidBrush(ModernTheme.TextMuted);
+            var latSize = g.MeasureString(latText, coordFont);
+            var lonSize = g.MeasureString(lonText, coordFont);
+            float maxWidth = Math.Max(latSize.Width, lonSize.Width);
+            g.DrawString(latText, coordFont, coordBrush, cx - maxWidth / 2, cy + radius + 10);
+            g.DrawString(lonText, coordFont, coordBrush, cx - maxWidth / 2, cy + radius + 22);
+        }
+    }
+
+    private void DrawAirspeedReadout(Graphics g, int x, int y)
+    {
+        using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
+        using var borderPen = new Pen(Color.FromArgb(60, 0, 212, 255), 1);
+
+        string aspdText = $"{_airSpeed:F1}";
+        string unitText = "m/s";
+
+        using var valFont = new Font("Cascadia Code", 11f, FontStyle.Bold);
+        using var unitFont = new Font("Segoe UI", 7f);
+        using var lblFont = new Font("Segoe UI", 6f, FontStyle.Bold);
+
+        var valSize = g.MeasureString(aspdText, valFont);
+        float boxW = Math.Max(valSize.Width + 16, 80);
+
+        g.FillRectangle(bgBrush, x, y, boxW, 36);
+        g.DrawRectangle(borderPen, x, y, boxW, 36);
+
+        using var lblBrush = new SolidBrush(ModernTheme.Accent);
+        g.DrawString("AIRSPD", lblFont, lblBrush, x + 3, y + 1);
+
+        Color aspdColor = _airSpeed > 30 ? ModernTheme.Warning : Color.FromArgb(220, 0, 200, 100);
+        using var valBrush = new SolidBrush(aspdColor);
+        g.DrawString(aspdText, valFont, valBrush, x + 6, y + 12);
+
+        using var unitBrush = new SolidBrush(ModernTheme.TextMuted);
+        g.DrawString(unitText, unitFont, unitBrush, x + valSize.Width + 8, y + 16);
     }
 }
