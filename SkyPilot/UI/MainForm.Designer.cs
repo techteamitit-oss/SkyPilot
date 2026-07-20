@@ -123,18 +123,19 @@ partial class MainForm
             AutoScroll = true
         };
 
-        // Section: Navigation
-        var navLabel = new Label { Text = "NAVIGATION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 10), AutoSize = true, BackColor = Color.Transparent };
-        sidePanel.Controls.Add(navLabel);
+        int y = 10; // running Y position
 
-        navOverview = MakeTextButton("Overview", 30, ModernTheme.Accent);
-        navSensors = MakeTextButton("Sensors", 64, ModernTheme.SurfaceLight);
-        navMission = MakeTextButton("Mission", 98, ModernTheme.SurfaceLight);
-        navMessages = MakeTextButton("Messages", 132, ModernTheme.SurfaceLight);
-        navParams = MakeTextButton("Parameters", 166, ModernTheme.SurfaceLight);
-        navSim = MakeTextButton("Simulator", 200, ModernTheme.Warning);
-        navMap = MakeTextButton("Map", 500, ModernTheme.SurfaceLight);
-        navLogs = MakeTextButton("Logs", 526, ModernTheme.SurfaceLight);
+        // Section: Navigation
+        var navLabel = new Label { Text = "NAVIGATION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
+        sidePanel.Controls.Add(navLabel);
+        y += 18;
+
+        navOverview = MakeTextButton("Overview", y, ModernTheme.Accent); y += 34;
+        navSensors = MakeTextButton("Sensors", y, ModernTheme.SurfaceLight); y += 34;
+        navMission = MakeTextButton("Mission", y, ModernTheme.SurfaceLight); y += 34;
+        navMessages = MakeTextButton("Messages", y, ModernTheme.SurfaceLight); y += 34;
+        navParams = MakeTextButton("Parameters", y, ModernTheme.SurfaceLight); y += 34;
+        navSim = MakeTextButton("Simulator", y, ModernTheme.Warning); y += 38;
 
         sidePanel.Controls.Add(navOverview);
         sidePanel.Controls.Add(navSensors);
@@ -143,13 +144,18 @@ partial class MainForm
         sidePanel.Controls.Add(navParams);
         sidePanel.Controls.Add(navSim);
 
+        // Divider
+        sidePanel.Controls.Add(new Panel { Location = new Point(12, y), Width = 136, Height = 1, BackColor = ModernTheme.Border });
+        y += 8;
+
         // Vehicle type selector
-        var vehicleLabel = new Label { Text = "VEHICLE", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 252), AutoSize = true, BackColor = Color.Transparent };
+        var vehicleLabel = new Label { Text = "VEHICLE", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(vehicleLabel);
+        y += 16;
 
         cmbVehicle = new ComboBox
         {
-            Location = new Point(8, 270),
+            Location = new Point(8, y),
             Width = 144,
             DropDownStyle = ComboBoxStyle.DropDownList,
             BackColor = ModernTheme.SurfaceLight,
@@ -160,14 +166,16 @@ partial class MainForm
         cmbVehicle.Items.AddRange(new object[] { "Plane", "Helicopter", "Drone" });
         cmbVehicle.SelectedIndex = 0;
         sidePanel.Controls.Add(cmbVehicle);
+        y += 24;
 
         // Flight pattern selector
-        var patternLabel = new Label { Text = "PATTERN", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 310), AutoSize = true, BackColor = Color.Transparent };
+        var patternLabel = new Label { Text = "PATTERN", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(patternLabel);
+        y += 16;
 
         cmbPattern = new ComboBox
         {
-            Location = new Point(8, 328),
+            Location = new Point(8, y),
             Width = 144,
             DropDownStyle = ComboBoxStyle.DropDownList,
             BackColor = ModernTheme.SurfaceLight,
@@ -178,17 +186,19 @@ partial class MainForm
         cmbPattern.Items.AddRange(new object[] { "Circle", "Point to Point", "Distance" });
         cmbPattern.SelectedIndex = 0;
         sidePanel.Controls.Add(cmbPattern);
+        y += 26;
 
         // Altitude slider
-        var altLabel = new Label { Text = "ALTITUDE", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 365), AutoSize = true, BackColor = Color.Transparent };
+        var altLabel = new Label { Text = "ALTITUDE", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(altLabel);
 
-        lblAltValue = new Label { Text = "100m", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, 363), AutoSize = true, BackColor = Color.Transparent };
+        lblAltValue = new Label { Text = "100m", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, y - 2), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(lblAltValue);
+        y += 16;
 
         trackAlt = new TrackBar
         {
-            Location = new Point(8, 380),
+            Location = new Point(8, y),
             Width = 144,
             Minimum = 10,
             Maximum = 500,
@@ -199,17 +209,19 @@ partial class MainForm
         };
         trackAlt.ValueChanged += (s, e) => { lblAltValue.Text = trackAlt.Value + "m"; };
         sidePanel.Controls.Add(trackAlt);
+        y += 45;
 
         // Wind speed slider
-        var windLabel = new Label { Text = "WIND", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 410), AutoSize = true, BackColor = Color.Transparent };
+        var windLabel = new Label { Text = "WIND", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(windLabel);
 
-        lblWindValue = new Label { Text = "0 m/s", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, 408), AutoSize = true, BackColor = Color.Transparent };
+        lblWindValue = new Label { Text = "0 m/s", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, y - 2), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(lblWindValue);
+        y += 16;
 
         trackWind = new TrackBar
         {
-            Location = new Point(8, 425),
+            Location = new Point(8, y),
             Width = 144,
             Minimum = 0,
             Maximum = 20,
@@ -220,17 +232,19 @@ partial class MainForm
         };
         trackWind.ValueChanged += (s, e) => { lblWindValue.Text = trackWind.Value + " m/s"; };
         sidePanel.Controls.Add(trackWind);
+        y += 45;
 
         // Rain intensity slider
-        var rainLabel = new Label { Text = "RAIN", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 455), AutoSize = true, BackColor = Color.Transparent };
+        var rainLabel = new Label { Text = "RAIN", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(rainLabel);
 
-        lblRainValue = new Label { Text = "Off", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, 453), AutoSize = true, BackColor = Color.Transparent };
+        lblRainValue = new Label { Text = "Off", Font = new Font("Segoe UI", 9f, FontStyle.Bold), ForeColor = ModernTheme.Accent, Location = new Point(110, y - 2), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(lblRainValue);
+        y += 16;
 
         trackRain = new TrackBar
         {
-            Location = new Point(8, 470),
+            Location = new Point(8, y),
             Width = 144,
             Minimum = 0,
             Maximum = 3,
@@ -244,23 +258,32 @@ partial class MainForm
             lblRainValue.Text = trackRain.Value switch { 0 => "Off", 1 => "Light", 2 => "Medium", 3 => "Heavy", _ => "Off" };
         };
         sidePanel.Controls.Add(trackRain);
+        y += 45;
 
+        // Divider
+        sidePanel.Controls.Add(new Panel { Location = new Point(12, y), Width = 136, Height = 1, BackColor = ModernTheme.Border });
+        y += 8;
+
+        // Map & Logs buttons
+        navMap = MakeTextButton("Map", y, ModernTheme.SurfaceLight); y += 34;
+        navLogs = MakeTextButton("Logs", y, ModernTheme.SurfaceLight); y += 38;
         sidePanel.Controls.Add(navMap);
         sidePanel.Controls.Add(navLogs);
 
         // Divider
-        var divider = new Panel { Location = new Point(12, 290), Width = 136, Height = 1, BackColor = ModernTheme.Border };
-        sidePanel.Controls.Add(divider);
+        sidePanel.Controls.Add(new Panel { Location = new Point(12, y), Width = 136, Height = 1, BackColor = ModernTheme.Border });
+        y += 8;
 
         // Section: Actions
-        var actLabel = new Label { Text = "ACTIONS", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 300), AutoSize = true, BackColor = Color.Transparent };
+        var actLabel = new Label { Text = "ACTIONS", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(actLabel);
+        y += 18;
 
-        btnArm = MakeTextButton("Arm", 320, ModernTheme.Success);
-        btnDisarm = MakeTextButton("Disarm", 354, ModernTheme.Warning);
-        btnTakeoff = MakeTextButton("Takeoff", 388, ModernTheme.Accent);
-        btnRTL = MakeTextButton("RTL", 422, ModernTheme.Info);
-        btnManual = MakeTextButton("Manual Flight", 456, ModernTheme.Accent);
+        btnArm = MakeTextButton("Arm", y, ModernTheme.Success); y += 34;
+        btnDisarm = MakeTextButton("Disarm", y, ModernTheme.Warning); y += 34;
+        btnTakeoff = MakeTextButton("Takeoff", y, ModernTheme.Accent); y += 34;
+        btnRTL = MakeTextButton("RTL", y, ModernTheme.Info); y += 34;
+        btnManual = MakeTextButton("Manual Flight", y, ModernTheme.Accent); y += 38;
 
         sidePanel.Controls.Add(btnArm);
         sidePanel.Controls.Add(btnDisarm);
@@ -270,34 +293,37 @@ partial class MainForm
 
         btnEmergencyStop = new Panels.ModernButton("EMERGENCY STOP", ModernTheme.Danger)
         {
-            Location = new Point(8, 492),
+            Location = new Point(8, y),
             Width = 144,
             Height = 32
         };
         sidePanel.Controls.Add(btnEmergencyStop);
+        y += 40;
 
-        // Divider 2
-        var divider2 = new Panel { Location = new Point(12, 530), Width = 136, Height = 1, BackColor = ModernTheme.Border };
-        sidePanel.Controls.Add(divider2);
+        // Divider
+        sidePanel.Controls.Add(new Panel { Location = new Point(12, y), Width = 136, Height = 1, BackColor = ModernTheme.Border });
+        y += 8;
 
         // Section: Connection
-        var connLabel = new Label { Text = "CONNECTION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, 540), AutoSize = true, BackColor = Color.Transparent };
+        var connLabel = new Label { Text = "CONNECTION", Font = new Font("Segoe UI", 7f, FontStyle.Bold), ForeColor = ModernTheme.TextMuted, Location = new Point(12, y), AutoSize = true, BackColor = Color.Transparent };
         sidePanel.Controls.Add(connLabel);
+        y += 18;
 
         btnConnect = new Panels.ModernButton("Connect", ModernTheme.Accent)
         {
-            Location = new Point(8, 558),
+            Location = new Point(8, y),
             Width = 68,
             Height = 28
         };
         btnDisconnect = new Panels.ModernButton("Disconnect", ModernTheme.SurfaceLight)
         {
-            Location = new Point(82, 558),
+            Location = new Point(82, y),
             Width = 70,
             Height = 28
         };
         sidePanel.Controls.Add(btnConnect);
         sidePanel.Controls.Add(btnDisconnect);
+        y += 36;
 
         // Section: Mode
         lblModeSelector = new Label
@@ -305,15 +331,16 @@ partial class MainForm
             Text = "FLIGHT MODE",
             Font = new Font("Segoe UI", 7f, FontStyle.Bold),
             ForeColor = ModernTheme.TextMuted,
-            Location = new Point(12, 596),
+            Location = new Point(12, y),
             AutoSize = true,
             BackColor = Color.Transparent
         };
         sidePanel.Controls.Add(lblModeSelector);
+        y += 16;
 
         cmbMode = new ComboBox
         {
-            Location = new Point(2, 614),
+            Location = new Point(2, y),
             Width = 144,
             DropDownStyle = ComboBoxStyle.DropDownList,
             BackColor = ModernTheme.SurfaceLight,
