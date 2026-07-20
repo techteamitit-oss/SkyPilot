@@ -79,7 +79,7 @@ public class OverviewPanel : UserControl
         Controls.Add(gaugeAltitude);
         Controls.Add(gaugeSats);
 
-        _compass = new CompassWidget { Size = new Size(120, 120), BackColor = Color.Transparent };
+        _compass = new CompassWidget { Size = new Size(120, 120), BackColor = ModernTheme.Background };
         Controls.Add(_compass);
 
         _tapTimer = new System.Windows.Forms.Timer { Interval = 250 };

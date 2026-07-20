@@ -61,6 +61,10 @@ public class MapPanel : UserControl
     {
         try
         {
+            // Clear stale WebView2 cache to prevent blank rendering
+            string cachePath = Path.Combine(Path.GetTempPath(), "SkyPilotWebView2");
+            try { if (Directory.Exists(cachePath)) Directory.Delete(cachePath, true); } catch { }
+
             _webView = new Microsoft.Web.WebView2.WinForms.WebView2
             {
                 Dock = DockStyle.Fill,
@@ -68,10 +72,18 @@ public class MapPanel : UserControl
             };
 
             var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(
-                null, Path.Combine(Path.GetTempPath(), "SkyPilotWebView2"));
+                null, cachePath);
             await _webView.EnsureCoreWebView2Async(env);
 
             _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+            _webView.CoreWebView2.NavigationCompleted += (s, e2) =>
+            {
+                if (!e2.IsSuccess)
+                {
+                    // Retry once on navigation failure
+                    BeginInvoke(() => { try { _webView?.NavigateToString(GetMapHtml()); } catch { } });
+                }
+            };
             _webView.NavigateToString(GetMapHtml());
 
             Controls.Add(_webView);
