@@ -43,6 +43,8 @@ public class OverviewPanel : UserControl
 
     private readonly Button _zoomInBtn;
     private readonly Button _zoomOutBtn;
+    private readonly System.Windows.Forms.Timer _tapTimer;
+    private bool _pendingSingleTap;
 
     public OverviewPanel()
     {
@@ -73,6 +75,33 @@ public class OverviewPanel : UserControl
 
         _compass = new CompassWidget { Size = new Size(120, 120), BackColor = Color.Transparent };
         Controls.Add(_compass);
+
+        _tapTimer = new System.Windows.Forms.Timer { Interval = 250 };
+        _tapTimer.Tick += (s, e) => { _tapTimer.Stop(); if (_pendingSingleTap) { _mapZoom = Math.Max(0.0005, _mapZoom * 0.7); Invalidate(); } _pendingSingleTap = false; };
+        MouseClick += OnOverviewClick;
+    }
+
+    private void OnOverviewClick(object? sender, MouseEventArgs e)
+    {
+        int mapX = Width - 260, mapY = 155, mapW = 240, mapH = 240;
+        if (e.X < mapX || e.X > mapX + mapW || e.Y < mapY || e.Y > mapY + mapH) return;
+
+        if (e.Button == MouseButtons.Left)
+        {
+            if (_pendingSingleTap)
+            {
+                // Double tap → zoom out
+                _tapTimer.Stop();
+                _pendingSingleTap = false;
+                _mapZoom = Math.Min(0.01, _mapZoom * 1.5);
+            }
+            else
+            {
+                // First tap → wait to see if double tap
+                _pendingSingleTap = true;
+                _tapTimer.Start();
+            }
+        }
     }
 
     protected override void OnResize(EventArgs e)
