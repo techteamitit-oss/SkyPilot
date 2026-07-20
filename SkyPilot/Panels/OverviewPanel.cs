@@ -40,6 +40,9 @@ public class OverviewPanel : UserControl
     private string _notification = "";
     private DateTime _notificationTime = DateTime.MinValue;
 
+    private readonly Button _zoomInBtn;
+    private readonly Button _zoomOutBtn;
+
     public OverviewPanel()
     {
         Dock = DockStyle.Fill;
@@ -52,6 +55,16 @@ public class OverviewPanel : UserControl
         gaugeAltitude = new CircularGauge { Label = "ALTITUDE", Unit = "m", MaxValue = 200, AccentColor = ModernTheme.Info, Size = new Size(140, 140) };
         gaugeSats = new CircularGauge { Label = "SATELLITES", Unit = "sats", MaxValue = 20, AccentColor = ModernTheme.Warning, Size = new Size(140, 140) };
 
+        _zoomInBtn = new Button { Text = "+", Size = new Size(22, 22), BackColor = Color.FromArgb(160, 33, 38, 45), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10f, FontStyle.Bold), Cursor = Cursors.Hand };
+        _zoomInBtn.FlatAppearance.BorderSize = 0;
+        _zoomInBtn.Click += (s, e) => { _mapZoom = Math.Max(0.0005, _mapZoom * 0.7); Invalidate(); };
+        Controls.Add(_zoomInBtn);
+
+        _zoomOutBtn = new Button { Text = "-", Size = new Size(22, 22), BackColor = Color.FromArgb(160, 33, 38, 45), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10f, FontStyle.Bold), Cursor = Cursors.Hand };
+        _zoomOutBtn.FlatAppearance.BorderSize = 0;
+        _zoomOutBtn.Click += (s, e) => { _mapZoom = Math.Min(0.01, _mapZoom * 1.4); Invalidate(); };
+        Controls.Add(_zoomOutBtn);
+
         Controls.Add(gaugeBattery);
         Controls.Add(gaugeSpeed);
         Controls.Add(gaugeAltitude);
@@ -62,6 +75,21 @@ public class OverviewPanel : UserControl
     {
         base.OnResize(e);
         LayoutGauges();
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        base.OnMouseWheel(e);
+        // Check if mouse is over the minimap area
+        int mapX = Width - 260, mapY = 155, mapW = 240, mapH = 240;
+        if (e.X >= mapX && e.X <= mapX + mapW && e.Y >= mapY && e.Y <= mapY + mapH)
+        {
+            if (e.Delta > 0)
+                _mapZoom = Math.Max(0.0005, _mapZoom * 0.8);
+            else
+                _mapZoom = Math.Min(0.01, _mapZoom * 1.25);
+            Invalidate();
+        }
     }
 
     private void LayoutGauges()
@@ -97,7 +125,12 @@ public class OverviewPanel : UserControl
         DrawCompass(g, Width - 80, 80);
 
         // === MINIMAP (right side, below compass) ===
-        DrawMiniMap(g, Width - 260, 155, 240, 240);
+        int mapX = Width - 260, mapY = 155, mapW = 240, mapH = 240;
+        DrawMiniMap(g, mapX, mapY, mapW, mapH);
+
+        // Position zoom buttons over minimap
+        _zoomInBtn.Location = new Point(mapX + 2, mapY + 2);
+        _zoomOutBtn.Location = new Point(mapX + 26, mapY + 2);
 
         // Notification banner
         if (!string.IsNullOrEmpty(_notification) && (DateTime.UtcNow - _notificationTime).TotalSeconds < 5)

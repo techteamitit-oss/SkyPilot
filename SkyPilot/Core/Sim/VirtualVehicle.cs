@@ -209,32 +209,14 @@ public class VirtualVehicle : IDisposable
     {
         if (_currentLeg >= _routePoints.Count - 1)
         {
-            // Reached final target
+            // Reached final target — hover in place
             if (!_targetReached)
             {
                 _targetReached = true;
                 SendStatustext("TARGET REACHED");
                 _patternProgress = 0;
             }
-            // RTL: fly back to start
-            double rtlLat = _routePoints[0].Lat + (_lat - _routePoints[0].Lat) * 0.99;
-            double rtlLon = _routePoints[0].Lon + (_lon - _routePoints[0].Lon) * 0.99;
-            double dlat = _routePoints[0].Lat - _lat;
-            double dlon = _routePoints[0].Lon - _lon;
-            _heading = (float)((Math.Atan2(dlon, dlat) * 180.0 / Math.PI + 360) % 360);
-            _lat = rtlLat;
-            _lon = rtlLon;
             _altitude = _baseAlt;
-            // Reset when close to start
-            if (HaversineDistance(_lat, _lon, _routePoints[0].Lat, _routePoints[0].Lon) < 10)
-            {
-                _targetReached = false;
-                _currentLeg = 0;
-                _patternProgress = 0;
-                _lat = _startLat;
-                _lon = _startLon;
-                SendStatustext("RTL COMPLETE - RESTARTING");
-            }
             return;
         }
 
