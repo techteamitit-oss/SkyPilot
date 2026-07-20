@@ -72,9 +72,25 @@ public class OverviewPanel : UserControl
     {
         base.OnResize(e);
         LayoutGauges();
-        // Default positions (only on first layout)
         if (_compass.Left < 10) _compass.Location = new Point(Width - 140, 15);
         if (_miniMap.Left < 10) _miniMap.Location = new Point(Width - 260, 155);
+    }
+
+    protected override void OnVisibleChanged(EventArgs e)
+    {
+        base.OnVisibleChanged(e);
+        if (Visible)
+        {
+            // Ensure compass and minimap are always children and on top
+            if (!Controls.Contains(_compass)) Controls.Add(_compass);
+            if (!Controls.Contains(_miniMap)) Controls.Add(_miniMap);
+            _compass.BringToFront();
+            _miniMap.BringToFront();
+            LayoutGauges();
+            if (_compass.Left < 10) _compass.Location = new Point(Width - 140, 15);
+            if (_miniMap.Left < 10) _miniMap.Location = new Point(Width - 260, 155);
+            Invalidate();
+        }
     }
 
     private void OnDragStart(object? sender, MouseEventArgs e)
