@@ -65,7 +65,7 @@ public class VirtualVehicle : IDisposable
 
         switch (_vehicleType)
         {
-            case "copter": _cruiseSpeed = 10f; _baseAlt = altitude ?? 50f; break;
+            case "drone": _cruiseSpeed = 10f; _baseAlt = altitude ?? 50f; break;
             case "rover": _cruiseSpeed = 5f; _baseAlt = 0f; break;
             default: _cruiseSpeed = 25f; _baseAlt = altitude ?? 100f; break;
         }
@@ -313,7 +313,7 @@ public class VirtualVehicle : IDisposable
         float roll, pitch;
         switch (_vehicleType)
         {
-            case "copter": roll = (float)(Math.Sin(_angle * 2) * 20); pitch = (float)(Math.Sin(_angle * 3) * 10); break;
+            case "drone": roll = (float)(Math.Sin(_angle * 2) * 20); pitch = (float)(Math.Sin(_angle * 3) * 10); break;
             case "rover": roll = 0; pitch = 0; break;
             default: roll = (float)(Math.Sin(_patternProgress * 10) * 15); pitch = (float)(Math.Sin(_patternProgress * 15) * 5); break;
         }
@@ -399,7 +399,7 @@ public class VirtualVehicle : IDisposable
 
     private void SendVibration()
     {
-        float vb = _vehicleType == "copter" ? 8f : 3f;
+        float vb = _vehicleType == "drone" ? 8f : 3f;
         var p = new byte[28];
         BitConverter.GetBytes(_bootMs).CopyTo(p, 0);
         BitConverter.GetBytes(vb + (float)_rng.NextDouble() * 5).CopyTo(p, 4);

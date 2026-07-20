@@ -156,7 +156,7 @@ partial class MainForm
             Font = new Font("Segoe UI", 8.5f),
             FlatStyle = FlatStyle.Standard
         };
-        cmbVehicle.Items.AddRange(new object[] { "Plane", "Copter", "Rover" });
+        cmbVehicle.Items.AddRange(new object[] { "Plane", "Drone", "Rover" });
         cmbVehicle.SelectedIndex = 0;
         sidePanel.Controls.Add(cmbVehicle);
 

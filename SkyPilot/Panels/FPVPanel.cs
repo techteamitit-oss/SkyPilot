@@ -874,7 +874,7 @@ public class FPVPanel : UserControl
     {
         switch (_vehicleType)
         {
-            case "copter":
+            case "drone":
             case "quad":
                 DrawCopter(g, cx, cy);
                 break;
