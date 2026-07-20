@@ -67,7 +67,18 @@ public partial class MainForm : Form
             BeginInvoke(UpdateStatusBar);
 
         _processor.MessageReceived += (text, severity) =>
-            BeginInvoke(() => _messageLog?.AddMessage(text, severity));
+        {
+            BeginInvoke(() =>
+            {
+                _messageLog?.AddMessage(text, severity);
+                if (text.Contains("TARGET REACHED"))
+                    _overviewPanel?.ShowNotification("TARGET REACHED - RTL");
+                else if (text.Contains("RTL COMPLETE"))
+                    _overviewPanel?.ShowNotification("RTL COMPLETE - RESTARTING");
+                else if (text.Contains("HOME REACHED"))
+                    _overviewPanel?.ShowNotification("HOME REACHED");
+            });
+        };
 
         _processor.CommandAckReceived += (cmd, result, sysid) =>
         {

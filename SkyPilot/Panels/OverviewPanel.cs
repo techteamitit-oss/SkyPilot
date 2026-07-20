@@ -35,6 +35,10 @@ public class OverviewPanel : UserControl
     private bool _compassPlaced;
     private bool _miniMapPlaced;
 
+    // Notification
+    private string _notification = "";
+    private DateTime _notificationTime = DateTime.MinValue;
+
     public OverviewPanel()
     {
         Dock = DockStyle.Fill;
@@ -94,7 +98,7 @@ public class OverviewPanel : UserControl
 
         _miniMap = new MiniMapControl
         {
-            Size = new Size(180, 180)
+            Size = new Size(240, 240)
         };
         _miniMap.MouseDown += OnDragStart;
         _miniMap.MouseMove += OnDragMove;
@@ -205,6 +209,23 @@ public class OverviewPanel : UserControl
             _compass.Heading = _state.Yaw;
         }
 
+        // Notification banner (fades after 5 seconds)
+        if (!string.IsNullOrEmpty(_notification) && (DateTime.UtcNow - _notificationTime).TotalSeconds < 5)
+        {
+            float alpha = Math.Max(0, 1f - (float)(DateTime.UtcNow - _notificationTime).TotalSeconds / 5f);
+            int bannerH = 36;
+            int bannerY = 170;
+            using var bannerBg = new SolidBrush(Color.FromArgb((int)(180 * alpha), 33, 38, 45));
+            g.FillRectangle(bannerBg, 20, bannerY, Width - 40, bannerH);
+            using var bannerBorder = new Pen(Color.FromArgb((int)(200 * alpha), 0, 212, 255), 1);
+            g.DrawRectangle(bannerBorder, 20, bannerY, Width - 40, bannerH);
+            using var bannerFont = new Font("Segoe UI", 11f, FontStyle.Bold);
+            using var bannerBrush = new SolidBrush(Color.FromArgb((int)(255 * alpha), 0, 212, 255));
+            var sz = g.MeasureString(_notification, bannerFont);
+            g.DrawString(_notification, bannerFont, bannerBrush, (Width - sz.Width) / 2, bannerY + (bannerH - sz.Height) / 2);
+            Invalidate(); // keep redrawing for fade
+        }
+
         // Bottom stat cards
         if (_state != null)
         {
@@ -263,6 +284,13 @@ public class OverviewPanel : UserControl
         if (state.Latitude != 0 && state.Longitude != 0)
             _miniMap.UpdatePosition(state.Latitude, state.Longitude, state.Yaw);
 
+        Invalidate();
+    }
+
+    public void ShowNotification(string text)
+    {
+        _notification = text;
+        _notificationTime = DateTime.UtcNow;
         Invalidate();
     }
 
