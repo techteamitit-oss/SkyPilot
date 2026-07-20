@@ -297,7 +297,7 @@ public partial class MainForm : Form
 
     private void SwitchTab(Panels.ModernButton nav, Control content)
     {
-        if (_activeNav != null) _activeNav.BaseColor = ModernTheme.TextMuted;
+        if (_activeNav != null) _activeNav.BaseColor = ModernTheme.SurfaceLight;
         if (_activeContent != null) _activeContent.Visible = false;
 
         nav.BaseColor = ModernTheme.Accent;

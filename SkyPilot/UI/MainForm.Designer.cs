@@ -127,13 +127,13 @@ partial class MainForm
         sidePanel.Controls.Add(navLabel);
 
         navOverview = MakeTextButton("Overview", 30, ModernTheme.Accent);
-        navSensors = MakeTextButton("Sensors", 62, ModernTheme.TextMuted);
-        navMission = MakeTextButton("Mission", 94, ModernTheme.TextMuted);
-        navMessages = MakeTextButton("Messages", 126, ModernTheme.TextMuted);
-        navParams = MakeTextButton("Parameters", 158, ModernTheme.TextMuted);
+        navSensors = MakeTextButton("Sensors", 62, ModernTheme.SurfaceLight);
+        navMission = MakeTextButton("Mission", 94, ModernTheme.SurfaceLight);
+        navMessages = MakeTextButton("Messages", 126, ModernTheme.SurfaceLight);
+        navParams = MakeTextButton("Parameters", 158, ModernTheme.SurfaceLight);
         navSim = MakeTextButton("Simulator", 190, ModernTheme.Warning);
-        navMap = MakeTextButton("Map", 500, ModernTheme.TextMuted);
-        navLogs = MakeTextButton("Logs", 526, ModernTheme.TextMuted);
+        navMap = MakeTextButton("Map", 500, ModernTheme.SurfaceLight);
+        navLogs = MakeTextButton("Logs", 526, ModernTheme.SurfaceLight);
 
         sidePanel.Controls.Add(navOverview);
         sidePanel.Controls.Add(navSensors);
@@ -156,7 +156,7 @@ partial class MainForm
             Font = new Font("Segoe UI", 8.5f),
             FlatStyle = FlatStyle.Standard
         };
-        cmbVehicle.Items.AddRange(new object[] { "Plane", "Drone", "Rover" });
+        cmbVehicle.Items.AddRange(new object[] { "Plane", "Helicopter", "Drone" });
         cmbVehicle.SelectedIndex = 0;
         sidePanel.Controls.Add(cmbVehicle);
 
@@ -289,7 +289,7 @@ partial class MainForm
             Width = 68,
             Height = 28
         };
-        btnDisconnect = new Panels.ModernButton("Disconnect", ModernTheme.TextMuted)
+        btnDisconnect = new Panels.ModernButton("Disconnect", ModernTheme.SurfaceLight)
         {
             Location = new Point(82, 526),
             Width = 70,

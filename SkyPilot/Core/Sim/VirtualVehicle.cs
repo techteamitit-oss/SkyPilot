@@ -66,7 +66,7 @@ public class VirtualVehicle : IDisposable
         switch (_vehicleType)
         {
             case "drone": _cruiseSpeed = 10f; _baseAlt = altitude ?? 50f; break;
-            case "rover": _cruiseSpeed = 5f; _baseAlt = 0f; break;
+            case "helicopter": _cruiseSpeed = 15f; _baseAlt = altitude ?? 50f; break;
             default: _cruiseSpeed = 25f; _baseAlt = altitude ?? 100f; break;
         }
         _altitude = _baseAlt;
@@ -314,7 +314,7 @@ public class VirtualVehicle : IDisposable
         switch (_vehicleType)
         {
             case "drone": roll = (float)(Math.Sin(_angle * 2) * 20); pitch = (float)(Math.Sin(_angle * 3) * 10); break;
-            case "rover": roll = 0; pitch = 0; break;
+            case "helicopter": roll = (float)(Math.Sin(_angle * 2) * 12); pitch = (float)(Math.Sin(_angle * 3) * 8); break;
             default: roll = (float)(Math.Sin(_patternProgress * 10) * 15); pitch = (float)(Math.Sin(_patternProgress * 15) * 5); break;
         }
         var p = new byte[28];

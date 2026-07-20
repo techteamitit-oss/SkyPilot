@@ -908,8 +908,8 @@ public class FPVPanel : UserControl
             case "quad":
                 DrawCopter(g, cx, cy);
                 break;
-            case "rover":
-                DrawRover(g, cx, cy);
+            case "helicopter":
+                DrawHelicopter(g, cx, cy);
                 break;
             default:
                 DrawPlane(g, cx, cy);
@@ -1079,57 +1079,94 @@ public class FPVPanel : UserControl
         g.ResetTransform();
     }
 
-    private void DrawRover(Graphics g, float cx, float cy)
+    private void DrawHelicopter(Graphics g, float cx, float cy)
     {
         g.TranslateTransform(cx, cy);
+        g.RotateTransform(-_roll);
 
         Color accent = ModernTheme.Accent;
         Color fill = Color.FromArgb(40, accent.R, accent.G, accent.B);
         Color outline = Color.FromArgb(200, accent.R, accent.G, accent.B);
         Color bright = Color.FromArgb(255, accent.R, accent.G, accent.B);
 
-        // Chassis
-        using var chassisBrush = new SolidBrush(fill);
-        using var chassisPen = new Pen(outline, 2);
-        var chassis = new Point[] {
-            new(-30, -8), new(30, -8), new(35, -2), new(35, 8),
-            new(-35, 8), new(-35, -2)
+        // Fuselage (teardrop shape)
+        using var bodyBrush = new SolidBrush(fill);
+        using var bodyPen = new Pen(outline, 2);
+        var body = new Point[] {
+            new(0, -35), new(-10, -15), new(-12, 10), new(-8, 25),
+            new(8, 25), new(12, 10), new(10, -15)
         };
-        g.FillPolygon(chassisBrush, chassis);
-        g.DrawPolygon(chassisPen, chassis);
+        g.FillPolygon(bodyBrush, body);
+        g.DrawPolygon(bodyPen, body);
 
-        // Roll cage / roof
-        using var cagePen = new Pen(outline, 1.5f);
-        g.DrawLine(cagePen, -20, -8, -18, -20);
-        g.DrawLine(cagePen, 20, -8, 18, -20);
-        g.DrawLine(cagePen, -18, -20, 18, -20);
+        // Cockpit canopy
+        using var canopyBrush = new SolidBrush(Color.FromArgb(60, accent.R, accent.G, accent.B));
+        using var canopyPen = new Pen(outline, 1.5f);
+        g.FillEllipse(canopyBrush, -8, -30, 16, 12);
+        g.DrawEllipse(canopyPen, -8, -30, 16, 12);
 
-        // Wheels (4)
-        int wheelR = 9;
-        int wheelY = 10;
-        var wheelPositions = new[] { (-25, wheelY), (25, wheelY) };
-        foreach (var (wx, wy) in wheelPositions)
+        // Tail boom
+        using var tailPen = new Pen(outline, 2);
+        g.DrawLine(tailPen, 0, 25, 0, 55);
+
+        // Tail fin (vertical)
+        using var finPen = new Pen(outline, 1.5f);
+        g.DrawLine(finPen, 0, 45, -5, 55);
+        g.DrawLine(finPen, 0, 45, 5, 55);
+        g.DrawLine(finPen, -5, 55, 5, 55);
+
+        // Tail rotor (small spinning disc)
+        int tailRotorR = 8;
+        float rotorPhase = (float)(Environment.TickCount % 800) / 800f * MathF.PI * 2;
+        float rotorSpeed = _throttle * 15f;
+        using var tailRotorBrush = new SolidBrush(Color.FromArgb(30, accent.R, accent.G, accent.B));
+        g.FillEllipse(tailRotorBrush, -tailRotorR - 4, 48, tailRotorR * 2, tailRotorR);
+        // Tail rotor blade lines
+        using var bladePen = new Pen(Color.FromArgb(60, accent.R, accent.G, accent.B), 1);
+        float phase = rotorPhase;
+        for (int b = 0; b < 2; b++)
         {
-            using var tireBrush = new SolidBrush(Color.FromArgb(180, 40, 40, 40));
-            using var tirePen = new Pen(outline, 1.5f);
-            g.FillEllipse(tireBrush, wx - wheelR, wy - wheelR, wheelR * 2, wheelR * 2);
-            g.DrawEllipse(tirePen, wx - wheelR, wy - wheelR, wheelR * 2, wheelR * 2);
-
-            // Hub
-            using var hubBrush = new SolidBrush(bright);
-            g.FillEllipse(hubBrush, wx - 3, wy - 3, 6, 6);
+            float a = phase + b * MathF.PI;
+            int bx1 = 0 + (int)(Math.Cos(a) * (tailRotorR - 1));
+            int by1 = 52 + (int)(Math.Sin(a) * (tailRotorR / 2));
+            g.DrawLine(bladePen, -5, 52, bx1 - 5, by1);
         }
 
-        // Headlights
-        using var lightBrush = new SolidBrush(Color.FromArgb(200, 255, 255, 150));
-        g.FillEllipse(lightBrush, 33, -4, 5, 4);
-        g.FillEllipse(lightBrush, 33, 2, 5, 4);
+        // Main rotor mast
+        using var mastPen = new Pen(outline, 2);
+        g.DrawLine(mastPen, 0, -35, 0, -42);
 
-        // Antenna
-        using var antPen = new Pen(outline, 1);
-        g.DrawLine(antPen, -15, -20, -15, -32);
-        using var antDot = new SolidBrush(bright);
-        g.FillEllipse(antDot, -16, -34, 3, 3);
+        // Main rotor (spinning)
+        int rotorR = 45;
+        int alpha = (int)(25 + 20 * _throttle);
+        using var mainRotorBrush = new SolidBrush(Color.FromArgb(alpha, accent.R, accent.G, accent.B));
+        g.FillEllipse(mainRotorBrush, -rotorR, -46, rotorR * 2, 10);
+
+        // Rotor blade lines (spin effect)
+        using var mainBladePen = new Pen(Color.FromArgb(alpha + 40, accent.R, accent.G, accent.B), 1.5f);
+        float mPhase = rotorPhase + 0.3f;
+        for (int b = 0; b < 2; b++)
+        {
+            float a = mPhase + b * MathF.PI;
+            int bx1 = (int)(Math.Cos(a) * (rotorR - 2));
+            int by1 = -42 + (int)(Math.Sin(a) * 4);
+            g.DrawLine(mainBladePen, -bx1, -42 - by1, bx1, -42 + by1);
+        }
+
+        // Rotor hub dot
+        using var hubBrush = new SolidBrush(bright);
+        g.FillEllipse(hubBrush, -3, -44, 6, 6);
+
+        // Skids
+        using var skidPen = new Pen(outline, 1.5f);
+        g.DrawLine(skidPen, -12, 25, -12, 32);
+        g.DrawLine(skidPen, 12, 25, 12, 32);
+        g.DrawLine(skidPen, -16, 32, 16, 32);
+
+        // Engine exhaust glow
+        float glow = Math.Clamp(_throttle, 0.3f, 1f);
+        using var exhaustBrush = new SolidBrush(Color.FromArgb((int)(50 * glow), 255, 180, 50));
+        g.FillEllipse(exhaustBrush, -4, 24, 8, (int)(4 + 8 * glow));
 
         g.ResetTransform();
     }
