@@ -168,10 +168,16 @@ public partial class MainForm : Form
         {
             _missionPanel?.AddWaypointFromMap(lat, lon);
             _messageLog?.AddMessage($"WP{idx} added: ({lat:F6},{lon:F6})", 6);
+            SyncRadarWaypoints();
         };
         _mapPanel.WaypointUpdated += (idx, lat, lon, alt, spd) =>
         {
             _missionPanel?.UpdateWaypointFromMap(idx, lat, lon, alt, spd);
+            SyncRadarWaypoints();
+        };
+        _mapPanel.WaypointRemoved += (idx) =>
+        {
+            SyncRadarWaypoints();
         };
         _mapPanel.ExportKmlRequested += () =>
         {
@@ -429,6 +435,8 @@ public partial class MainForm : Form
             altitude: trackAlt.Value);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
         _fpvPanel?.SetVehicleType(_selectedVehicleType);
+        _fpvPanel?.SetRadarHome(_simStartLat, _simStartLon);
+        _fpvPanel?.SetRadarWaypoints(mapWps);
         SwitchTab(navMap, _mapContainer!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
             _sim.TargetLat, _sim.TargetLon, _selectedPattern, mapWps.Count > 0 ? mapWps : null);
@@ -455,6 +463,12 @@ public partial class MainForm : Form
             lblConnection.Text = "Disconnected";
             lblConnection.ForeColor = ModernTheme.TextMuted;
         }
+    }
+
+    private void SyncRadarWaypoints()
+    {
+        var wps = _mapPanel?.GetWaypoints() ?? new();
+        _fpvPanel?.SetRadarWaypoints(wps);
     }
 
     private void DisconnectToolStripMenuItem_Click(object sender, EventArgs e)

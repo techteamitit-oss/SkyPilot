@@ -19,7 +19,7 @@ public class FPVPanel : UserControl
     private DateTime _armTime = DateTime.MinValue;
     private TimeSpan _flightTime;
     private string _vehicleType = "plane";
-    private readonly MiniMapControl _miniMap;
+    private readonly RadarDisplay _radar;
     private bool _recording;
     private string? _recordDir;
     private int _frameCount;
@@ -39,13 +39,13 @@ public class FPVPanel : UserControl
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         BackColor = Color.FromArgb(13, 17, 23);
 
-        _miniMap = new MiniMapControl
+        _radar = new RadarDisplay
         {
-            Size = new Size(160, 160),
+            Size = new Size(180, 180),
             Location = new Point(10, 10),
             Anchor = AnchorStyles.Top | AnchorStyles.Left
         };
-        Controls.Add(_miniMap);
+        Controls.Add(_radar);
 
         _recBtn = new Button
         {
@@ -91,13 +91,23 @@ public class FPVPanel : UserControl
     {
         _latitude = lat;
         _longitude = lon;
-        _miniMap.UpdatePosition(lat, lon, heading);
+        _radar.UpdatePosition(lat, lon, heading);
     }
 
     public void SetVehicleType(string type)
     {
         _vehicleType = type?.ToLower() ?? "plane";
         Invalidate();
+    }
+
+    public void SetRadarWaypoints(List<(double Lat, double Lon)> waypoints)
+    {
+        _radar.SetWaypoints(waypoints);
+    }
+
+    public void SetRadarHome(double lat, double lon)
+    {
+        _radar.SetHome(lat, lon);
     }
 
     public void SetRain(int intensity)
