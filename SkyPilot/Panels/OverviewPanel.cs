@@ -7,6 +7,7 @@ namespace SkyPilot.Panels;
 
 /// <summary>
 /// Modern overview with circular gauges and stat cards.
+/// Compass and minimap are draggable — hold and drag to reposition.
 /// </summary>
 public class OverviewPanel : UserControl
 {
@@ -27,6 +28,12 @@ public class OverviewPanel : UserControl
     private string _posText = "--";
     private readonly CompassWidget _compass;
     private readonly MiniMapControl _miniMap;
+
+    // Drag state
+    private Control? _dragTarget;
+    private Point _dragOffset;
+    private bool _compassPlaced;
+    private bool _miniMapPlaced;
 
     public OverviewPanel()
     {
@@ -80,13 +87,51 @@ public class OverviewPanel : UserControl
             Size = new Size(120, 120),
             BackColor = ModernTheme.Background
         };
+        _compass.MouseDown += OnDragStart;
+        _compass.MouseMove += OnDragMove;
+        _compass.MouseUp += OnDragEnd;
         Controls.Add(_compass);
 
         _miniMap = new MiniMapControl
         {
             Size = new Size(180, 180)
         };
+        _miniMap.MouseDown += OnDragStart;
+        _miniMap.MouseMove += OnDragMove;
+        _miniMap.MouseUp += OnDragEnd;
         Controls.Add(_miniMap);
+    }
+
+    private void OnDragStart(object? sender, MouseEventArgs e)
+    {
+        if (sender is Control ctrl && e.Button == MouseButtons.Left)
+        {
+            _dragTarget = ctrl;
+            _dragOffset = e.Location;
+            ctrl.BringToFront();
+        }
+    }
+
+    private void OnDragMove(object? sender, MouseEventArgs e)
+    {
+        if (_dragTarget != null && e.Button == MouseButtons.Left)
+        {
+            int nx = _dragTarget.Left + e.X - _dragOffset.X;
+            int ny = _dragTarget.Top + e.Y - _dragOffset.Y;
+            _dragTarget.Location = new Point(
+                Math.Max(0, Math.Min(Width - _dragTarget.Width, nx)),
+                Math.Max(0, Math.Min(Height - _dragTarget.Height, ny)));
+        }
+    }
+
+    private void OnDragEnd(object? sender, MouseEventArgs e)
+    {
+        if (_dragTarget != null)
+        {
+            if (_dragTarget == _compass) _compassPlaced = true;
+            if (_dragTarget == _miniMap) _miniMapPlaced = true;
+            _dragTarget = null;
+        }
     }
 
     protected override void OnResize(EventArgs e)
@@ -114,6 +159,12 @@ public class OverviewPanel : UserControl
         gaugeSpeed.Location = new Point(startX + gaugeSize + gap, gaugeY);
         gaugeAltitude.Location = new Point(startX + (gaugeSize + gap) * 2, gaugeY);
         gaugeSats.Location = new Point(startX + (gaugeSize + gap) * 3, gaugeY);
+
+        // Default positions for compass and minimap (only if not yet dragged)
+        if (!_compassPlaced)
+            _compass.Location = new Point(Width - 140, 20);
+        if (!_miniMapPlaced)
+            _miniMap.Location = new Point(Width - 200, 150);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -126,20 +177,16 @@ public class OverviewPanel : UserControl
         // Grid background
         ModernTheme.DrawGridBackground(g, new Rectangle(0, 0, Width, Height));
 
-        // Compass (top right)
-        if (_state != null)
-        {
-            _compass.Location = new Point(Width - 140, 20);
-            _compass.Heading = _state.Yaw;
-
-            // Mini map (below compass)
-            _miniMap.Location = new Point(Width - 200, 150);
-        }
-
         // Section title
         using var titleFont = new Font("Segoe UI", 9f, FontStyle.Bold);
         using var titleBrush = new SolidBrush(ModernTheme.TextMuted);
         g.DrawString("FLIGHT OVERVIEW", titleFont, titleBrush, 20, 10);
+
+        // Compass heading
+        if (_state != null)
+        {
+            _compass.Heading = _state.Yaw;
+        }
 
         // Bottom stat cards
         if (_state != null)
