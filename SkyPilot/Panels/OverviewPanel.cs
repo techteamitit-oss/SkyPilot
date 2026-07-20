@@ -76,7 +76,7 @@ public class OverviewPanel : UserControl
             _compassX = Width - COMPASS_SIZE - 20;
             _compassY = 20;
             _minimapX = Width - MINIMAP_SIZE - 20;
-            _minimapY = 160;
+            _minimapY = 300;
         }
     }
 
