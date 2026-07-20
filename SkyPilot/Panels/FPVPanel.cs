@@ -313,10 +313,10 @@ public class FPVPanel : UserControl
         DrawSpeedTape(g, 10, cy, h);
 
         // === THROTTLE BAR (bottom left) ===
-        DrawThrottleBar(g, 10, h - 30, 80, 12);
+        DrawThrottleBar(g, 10, h - 65, 100, 14);
 
         // === BATTERY INDICATOR (bottom left, below throttle) ===
-        DrawBatteryIndicator(g, 10, h - 60, 100, 14);
+        DrawBatteryIndicator(g, 10, h - 42, 100, 14);
 
         // === AIRSPEED READOUT (top left, below flight timer) ===
         DrawAirspeedReadout(g, 10, 240);
@@ -530,19 +530,39 @@ public class FPVPanel : UserControl
 
     private void DrawThrottleBar(Graphics g, int x, int y, int w, int h)
     {
+        // Throttle housing
+        int housingW = 10;
+        int housingH = h + 4;
+        int housingX = x + w - housingW + 3;
+        int housingY = y - 2;
+
         using var bgBrush = new SolidBrush(Color.FromArgb(140, 13, 17, 23));
         g.FillRectangle(bgBrush, x, y, w, h);
         using var borderPen = new Pen(Color.FromArgb(80, 0, 212, 255), 1);
         g.DrawRectangle(borderPen, x, y, w, h);
 
+        // Battery nub (positive terminal)
+        using var nubBrush = new SolidBrush(Color.FromArgb(100, 80, 80, 80));
+        g.FillRectangle(nubBrush, housingX + 2, housingY - 1, housingW - 4, 2);
+
         float fill = Math.Clamp(_throttle, 0, 1);
         Color barColor = fill > 0.8f ? ModernTheme.Warning : ModernTheme.Accent;
-        using var barBrush = new SolidBrush(barColor);
-        g.FillRectangle(barBrush, x + 1, y + 1, (int)((w - 2) * fill), h - 2);
 
-        using var font = new Font("Cascadia Code", 7f);
-        using var brush = new SolidBrush(ModernTheme.TextPrimary);
-        g.DrawString($"THR {fill * 100:F0}%", font, brush, x + 2, y - 12);
+        // Fill bar
+        using var barBrush = new SolidBrush(barColor);
+        g.FillRectangle(barBrush, x + 1, y + 1, (int)((w - housingW - 2) * fill), h - 2);
+
+        // Percentage text (centered on bar)
+        using var pctFont = new Font("Cascadia Code", 9f, FontStyle.Bold);
+        using var pctBrush = new SolidBrush(fill > 0.8f ? Color.White : Color.FromArgb(200, 255, 255, 255));
+        string pctText = $"{fill * 100:F0}%";
+        var pctSize = g.MeasureString(pctText, pctFont);
+        g.DrawString(pctText, pctFont, pctBrush, x + (w - housingW) / 2 - pctSize.Width / 2, y + (h - pctSize.Height) / 2);
+
+        // Label
+        using var lblFont = new Font("Segoe UI", 7f, FontStyle.Bold);
+        using var lblBrush = new SolidBrush(barColor);
+        g.DrawString("THROTTLE", lblFont, lblBrush, x + 2, y - 12);
     }
 
     private void DrawBatteryIndicator(Graphics g, int x, int y, int w, int h)
