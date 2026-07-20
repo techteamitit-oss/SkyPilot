@@ -18,6 +18,7 @@ public class FPVPanel : UserControl
     private bool _armed;
     private DateTime _armTime = DateTime.MinValue;
     private TimeSpan _flightTime;
+    private string _vehicleType = "plane";
     private readonly MiniMapControl _miniMap;
     private bool _recording;
     private string? _recordDir;
@@ -91,6 +92,12 @@ public class FPVPanel : UserControl
         _latitude = lat;
         _longitude = lon;
         _miniMap.UpdatePosition(lat, lon, heading);
+    }
+
+    public void SetVehicleType(string type)
+    {
+        _vehicleType = type?.ToLower() ?? "plane";
+        Invalidate();
     }
 
     public void SetRain(int intensity)
@@ -280,14 +287,8 @@ public class FPVPanel : UserControl
 
         g.ResetTransform();
 
-        // === FLIGHT PATH MARKER (velocity vector) ===
-        float fpmX = cx;
-        float fpmY = cy - _pitch * 2.5f;
-        using var fpmPen = new Pen(Color.FromArgb(200, 0, 255, 0), 2);
-        g.DrawEllipse(fpmPen, fpmX - 8, fpmY - 8, 16, 16);
-        g.DrawLine(fpmPen, fpmX - 14, fpmY, fpmX - 8, fpmY);
-        g.DrawLine(fpmPen, fpmX + 8, fpmY, fpmX + 14, fpmY);
-        g.DrawLine(fpmPen, fpmX, fpmY + 8, fpmX, fpmY + 14);
+        // === VEHICLE MODEL (center, responds to attitude) ===
+        DrawVehicle(g, cx, cy - _pitch * 2.5f);
 
         // === BANK ANGLE INDICATOR (top center) ===
         DrawBankIndicator(g, cx, 30);
@@ -300,12 +301,6 @@ public class FPVPanel : UserControl
 
         // === SPEED TAPE (left side) ===
         DrawSpeedTape(g, 10, cy, h);
-
-        // === CENTER RETICLE ===
-        using var reticlePen = new Pen(Color.FromArgb(150, 0, 212, 255), 2);
-        g.DrawLine(reticlePen, cx - 30, cy, cx - 10, cy);
-        g.DrawLine(reticlePen, cx + 10, cy, cx + 30, cy);
-        g.DrawLine(reticlePen, cx, cy - 10, cx, cy - 6);
 
         // === THROTTLE BAR (bottom left) ===
         DrawThrottleBar(g, 10, h - 30, 80, 12);
@@ -863,5 +858,239 @@ public class FPVPanel : UserControl
 
         using var unitBrush = new SolidBrush(ModernTheme.TextMuted);
         g.DrawString(unitText, unitFont, unitBrush, x + valSize.Width + 8, y + 16);
+    }
+
+    private void DrawVehicle(Graphics g, float cx, float cy)
+    {
+        switch (_vehicleType)
+        {
+            case "copter":
+            case "quad":
+                DrawCopter(g, cx, cy);
+                break;
+            case "rover":
+                DrawRover(g, cx, cy);
+                break;
+            default:
+                DrawPlane(g, cx, cy);
+                break;
+        }
+    }
+
+    private void DrawPlane(Graphics g, float cx, float cy)
+    {
+        g.TranslateTransform(cx, cy);
+        g.RotateTransform(-_roll);
+
+        Color accent = ModernTheme.Accent;
+        Color fill = Color.FromArgb(40, accent.R, accent.G, accent.B);
+        Color outline = Color.FromArgb(200, accent.R, accent.G, accent.B);
+        Color bright = Color.FromArgb(255, accent.R, accent.G, accent.B);
+
+        // Fuselage
+        using var fuselageBrush = new SolidBrush(fill);
+        using var fuselagePen = new Pen(outline, 2);
+        var fuselage = new Point[] {
+            new(0, -50), new(-6, -20), new(-6, 40), new(0, 55), new(6, 40), new(6, -20)
+        };
+        g.FillPolygon(fuselageBrush, fuselage);
+        g.DrawPolygon(fuselagePen, fuselage);
+
+        // Main wings
+        using var wingBrush = new SolidBrush(fill);
+        using var wingPen = new Pen(outline, 2);
+        var leftWing = new Point[] {
+            new(-6, -5), new(-55, 8), new(-50, 14), new(-6, 10)
+        };
+        var rightWing = new Point[] {
+            new(6, -5), new(55, 8), new(50, 14), new(6, 10)
+        };
+        g.FillPolygon(wingBrush, leftWing);
+        g.DrawPolygon(wingPen, leftWing);
+        g.FillPolygon(wingBrush, rightWing);
+        g.DrawPolygon(wingPen, rightWing);
+
+        // Wing tip lights
+        using var tipBrush = new SolidBrush(Color.FromArgb(220, 0, 255, 80));
+        g.FillEllipse(tipBrush, -57, 6, 6, 6);
+        using var tipRedBrush = new SolidBrush(Color.FromArgb(220, 255, 50, 50));
+        g.FillEllipse(tipRedBrush, 51, 6, 6, 6);
+
+        // Horizontal stabilizer
+        using var hstabBrush = new SolidBrush(fill);
+        using var hstabPen = new Pen(outline, 1.5f);
+        var leftHstab = new Point[] {
+            new(-5, 42), new(-25, 48), new(-22, 52), new(-5, 50)
+        };
+        var rightHstab = new Point[] {
+            new(5, 42), new(25, 48), new(22, 52), new(5, 50)
+        };
+        g.FillPolygon(hstabBrush, leftHstab);
+        g.DrawPolygon(hstabPen, leftHstab);
+        g.FillPolygon(hstabBrush, rightHstab);
+        g.DrawPolygon(hstabPen, rightHstab);
+
+        // Vertical stabilizer
+        using var vstabPen = new Pen(outline, 1.5f);
+        var vstab = new Point[] {
+            new(-2, 44), new(0, 30), new(2, 44), new(0, 50)
+        };
+        g.DrawPolygon(vstabPen, vstab);
+
+        // Nose cone
+        using var noseBrush = new SolidBrush(bright);
+        g.FillEllipse(noseBrush, -4, -55, 8, 10);
+
+        // Engine glow
+        float glow = Math.Clamp(_throttle, 0.3f, 1f);
+        using var engineBrush = new SolidBrush(Color.FromArgb((int)(80 * glow), 255, 180, 50));
+        g.FillEllipse(engineBrush, -5, 50, 10, (int)(8 + 12 * glow));
+
+        g.ResetTransform();
+    }
+
+    private void DrawCopter(Graphics g, float cx, float cy)
+    {
+        g.TranslateTransform(cx, cy);
+        g.RotateTransform(-_roll);
+
+        Color accent = ModernTheme.Accent;
+        Color fill = Color.FromArgb(40, accent.R, accent.G, accent.B);
+        Color outline = Color.FromArgb(200, accent.R, accent.G, accent.B);
+        Color bright = Color.FromArgb(255, accent.R, accent.G, accent.B);
+
+        // Center body (hexagonal)
+        using var bodyBrush = new SolidBrush(fill);
+        using var bodyPen = new Pen(outline, 2);
+        int bodyR = 14;
+        var body = new Point[6];
+        for (int i = 0; i < 6; i++)
+        {
+            double rad = (i * 60 - 90) * Math.PI / 180.0;
+            body[i] = new Point((int)(Math.Cos(rad) * bodyR), (int)(Math.Sin(rad) * bodyR));
+        }
+        g.FillPolygon(bodyBrush, body);
+        g.DrawPolygon(bodyPen, body);
+
+        // Arms and motors (4 rotors)
+        int armLen = 38;
+        int motorR = 6;
+        var armAngles = new[] { -45, 45, 135, -135 };
+        float rotorPhase = (float)(Environment.TickCount % 1000) / 1000f * MathF.PI * 2;
+        float rotorSpeed = _throttle * 20f;
+
+        foreach (int angle in armAngles)
+        {
+            double rad = angle * Math.PI / 180.0;
+            int mx = (int)(Math.Cos(rad) * armLen);
+            int my = (int)(Math.Sin(rad) * armLen);
+
+            // Arm
+            using var armPen = new Pen(outline, 2);
+            g.DrawLine(armPen, 0, 0, mx, my);
+
+            // Motor housing
+            using var motorBrush = new SolidBrush(fill);
+            using var motorPen = new Pen(outline, 1.5f);
+            g.FillEllipse(motorBrush, mx - motorR, my - motorR, motorR * 2, motorR * 2);
+            g.DrawEllipse(motorPen, mx - motorR, my - motorR, motorR * 2, motorR * 2);
+
+            // Spinning rotor disc (semi-transparent, animated)
+            int rotorR = 20;
+            int alpha = (int)(40 + 30 * _throttle);
+            using var rotorBrush = new SolidBrush(Color.FromArgb(alpha, accent.R, accent.G, accent.B));
+            g.FillEllipse(rotorBrush, mx - rotorR, my - rotorR, rotorR * 2, rotorR * 2);
+
+            // Rotor blade lines (spin effect)
+            using var bladePen = new Pen(Color.FromArgb(alpha + 40, accent.R, accent.G, accent.B), 1);
+            float phase = rotorPhase + angle * 0.5f;
+            for (int b = 0; b < 2; b++)
+            {
+                float a = phase + b * MathF.PI;
+                int bx1 = mx + (int)(Math.Cos(a) * (rotorR - 2));
+                int by1 = my + (int)(Math.Sin(a) * (rotorR - 2));
+                int bx2 = mx - (int)(Math.Cos(a) * (rotorR - 2));
+                int by2 = my - (int)(Math.Sin(a) * (rotorR - 2));
+                g.DrawLine(bladePen, bx1, by1, bx2, by2);
+            }
+
+            // Motor center dot
+            using var dotBrush = new SolidBrush(bright);
+            g.FillEllipse(dotBrush, mx - 2, my - 2, 4, 4);
+        }
+
+        // Landing gear
+        using var gearPen = new Pen(outline, 1.5f);
+        int gearY = 18;
+        int gearW = 16;
+        // Left gear
+        g.DrawLine(gearPen, -10, bodyR, -10 - gearW, gearY);
+        g.DrawLine(gearPen, -10 - gearW, gearY, -10 - gearW + 8, gearY);
+        // Right gear
+        g.DrawLine(gearPen, 10, bodyR, 10 + gearW, gearY);
+        g.DrawLine(gearPen, 10 + gearW, gearY, 10 + gearW - 8, gearY);
+
+        // Camera gimbal (center bottom)
+        using var camPen = new Pen(outline, 1);
+        g.DrawEllipse(camPen, -4, bodyR + 2, 8, 6);
+        using var camDot = new SolidBrush(Color.FromArgb(200, 255, 60, 60));
+        g.FillEllipse(camDot, -1, bodyR + 4, 3, 3);
+
+        g.ResetTransform();
+    }
+
+    private void DrawRover(Graphics g, float cx, float cy)
+    {
+        g.TranslateTransform(cx, cy);
+
+        Color accent = ModernTheme.Accent;
+        Color fill = Color.FromArgb(40, accent.R, accent.G, accent.B);
+        Color outline = Color.FromArgb(200, accent.R, accent.G, accent.B);
+        Color bright = Color.FromArgb(255, accent.R, accent.G, accent.B);
+
+        // Chassis
+        using var chassisBrush = new SolidBrush(fill);
+        using var chassisPen = new Pen(outline, 2);
+        var chassis = new Point[] {
+            new(-30, -8), new(30, -8), new(35, -2), new(35, 8),
+            new(-35, 8), new(-35, -2)
+        };
+        g.FillPolygon(chassisBrush, chassis);
+        g.DrawPolygon(chassisPen, chassis);
+
+        // Roll cage / roof
+        using var cagePen = new Pen(outline, 1.5f);
+        g.DrawLine(cagePen, -20, -8, -18, -20);
+        g.DrawLine(cagePen, 20, -8, 18, -20);
+        g.DrawLine(cagePen, -18, -20, 18, -20);
+
+        // Wheels (4)
+        int wheelR = 9;
+        int wheelY = 10;
+        var wheelPositions = new[] { (-25, wheelY), (25, wheelY) };
+        foreach (var (wx, wy) in wheelPositions)
+        {
+            using var tireBrush = new SolidBrush(Color.FromArgb(180, 40, 40, 40));
+            using var tirePen = new Pen(outline, 1.5f);
+            g.FillEllipse(tireBrush, wx - wheelR, wy - wheelR, wheelR * 2, wheelR * 2);
+            g.DrawEllipse(tirePen, wx - wheelR, wy - wheelR, wheelR * 2, wheelR * 2);
+
+            // Hub
+            using var hubBrush = new SolidBrush(bright);
+            g.FillEllipse(hubBrush, wx - 3, wy - 3, 6, 6);
+        }
+
+        // Headlights
+        using var lightBrush = new SolidBrush(Color.FromArgb(200, 255, 255, 150));
+        g.FillEllipse(lightBrush, 33, -4, 5, 4);
+        g.FillEllipse(lightBrush, 33, 2, 5, 4);
+
+        // Antenna
+        using var antPen = new Pen(outline, 1);
+        g.DrawLine(antPen, -15, -20, -15, -32);
+        using var antDot = new SolidBrush(bright);
+        g.FillEllipse(antDot, -16, -34, 3, 3);
+
+        g.ResetTransform();
     }
 }

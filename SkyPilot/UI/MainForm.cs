@@ -232,7 +232,10 @@ public partial class MainForm : Form
         cmbVehicle.SelectedIndexChanged += (s, e) =>
         {
             if (cmbVehicle.SelectedItem is string type)
+            {
                 _selectedVehicleType = type.ToLower();
+                _fpvPanel?.SetVehicleType(_selectedVehicleType);
+            }
         };
         cmbPattern.SelectedIndexChanged += (s, e) =>
         {
@@ -425,6 +428,7 @@ public partial class MainForm : Form
             intermediateWaypoints: mapWps.Count > 0 ? mapWps : null,
             altitude: trackAlt.Value);
         _mapPanel?.SetVehicleType(_selectedVehicleType);
+        _fpvPanel?.SetVehicleType(_selectedVehicleType);
         SwitchTab(navMap, _mapContainer!);
         _mapPanel?.ShowFlightPath(_sim.StartLat, _sim.StartLon,
             _sim.TargetLat, _sim.TargetLon, _selectedPattern, mapWps.Count > 0 ? mapWps : null);
